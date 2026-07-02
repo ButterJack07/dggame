@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帝国时代风格 5x5 地图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
+  #info {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    color: #f0d9a0; font-size: 14px; z-index: 10;
+    background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 6px;
+    border: 1px solid rgba(240,217,160,0.2);
+    pointer-events: none; user-select: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  #info kbd {
+    background: rgba(240,217,160,0.15); padding: 1px 6px; border-radius: 3px;
+    border: 1px solid rgba(240,217,160,0.3); font-size: 12px;
+  }
+  canvas { display: block; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  #buildingPanel {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(30,20,10,0.94), rgba(15,10,5,0.94));
+    border: 2px solid #8a7a5a;
+    border-radius: 6px;
+    padding: 8px;
+    user-select: none;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  }
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  #buildingPanel .panel-title {
+    color: #f0d9a0;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(240,217,160,0.15);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    letter-spacing: 2px;
+  }
+  .building-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 6px 4px;
+    background: rgba(240,217,160,0.05);
+    border: 1px solid rgba(240,217,160,0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    color: #d4c4a0;
+    font-size: 10px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: all 0.1s;
+    min-width: 0;
+  }
+  .building-item:hover {
+    background: rgba(240,217,160,0.16);
+    border-color: rgba(240,217,160,0.35);
+    color: #f0d9a0;
+  }
+  .building-item:active {
+    background: rgba(240,217,160,0.25);
+  }
+  .building-item.active {
+    background: rgba(240,217,160,0.22);
+    border-color: #f0d9a0;
+    color: #fff0c0;
+    box-shadow: 0 0 8px rgba(240,217,160,0.12);
+  }
+  .building-item .bi {
+    font-size: 16px;
+    line-height: 1;
+  }
+  #placementHint {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    color: #f0d9a0;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: rgba(0,0,0,0.75);
+    padding: 6px 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(240,217,160,0.25);
+    pointer-events: none;
+    display: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+  #speedToggle {
+    position: fixed;
+    top: 50px;
+    right: 16px;
+    z-index: 20;
+    background: rgba(30,20,10,0.9);
+    border: 1px solid #8a7a5a;
+    border-radius: 4px;
+    padding: 4px 10px;
+    color: #f0d9a0;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: all 0.15s;
+  }
+  #speedToggle:hover { background: rgba(50,35,20,0.9); }
+  #speedToggle.speed-on { border-color: #ff6666; color: #ff8888; }
+  #placementHint .key {
+    background: rgba(240,217,160,0.12);
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(240,217,160,0.2);
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div id="info">
+  <span id="infoText"></span>
+</div>
+<canvas id="game"></canvas>
+<div id="buildingPanel">
+  <div class="panel-title">🏗 建筑</div>
+  <div class="panel-grid">
+    <div class="building-item" data-type="town-center"><span class="bi">🏛</span>城镇中心</div>
+    <div class="building-item" data-type="barracks"><span class="bi">⚔</span>兵营</div>
+    <div class="building-item" data-type="stable"><span class="bi">🐴</span>马厩</div>
+    <div class="building-item" data-type="church"><span class="bi">⛪</span>教堂</div>
+    <div class="building-item" data-type="market"><span class="bi">🏪</span>市场</div>
+    <div class="building-item" data-type="house"><span class="bi">🏠</span>房屋</div>
+    <div class="building-item" data-type="lumber-camp"><span class="bi">🪵</span>伐木场</div>
+    <div class="building-item" data-type="mining-camp"><span class="bi">⛏️</span>采矿场</div>
+    <div class="building-item" data-type="mill"><span class="bi">🌾</span>磨坊</div>
+  </div>
+</div>
+<div id="placementHint">点击地块放置建筑 · <span class="key">右键</span>取消</div>
+<div id="speedToggle" class="speed-off">🐇 1×</div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+let W, H, fitZoom;
+// ====== 常量 ======
+const TILE_W = 96;         // 菱形宽度
+const TILE_H = 48;          // 菱形高度（透视/2）
+const TILE_H_MAX = 60;     // 地形最大隆起高度
+const MAP_N = 50;
+
+document.getElementById('infoText').textContent =
+  `🏰 帝国时代风格 ${MAP_N}×${MAP_N} — 建造伐木场/采矿场/磨坊采集资源 · 资源可耗尽 · 选中查看进度条`;
+
+// ====== 相机 ======
+const cam = { x: 0, y: 0, zoom: 1 };
+let MIN_ZOOM, MAX_ZOOM;
+let mapCenterX = 0;
+let mapCenterY = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  const mapW = MAP_N * TILE_W;
+  const mapH = MAP_N * TILE_H + TILE_H_MAX;
+  fitZoom = Math.min(W / mapW, H / mapH) * 0.88;
+  MIN_ZOOM = fitZoom * 0.2;
+  MAX_ZOOM = 3.0;
+  mapCenterX = W / 2;
+  mapCenterY = H / 2 - (MAP_N - 1) * (TILE_H / 2);
+  cam.zoom = fitZoom * 2.5;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ====== 交互状态 ======
+let isDragging = false;
+let dragStartX = 0, dragStartY = 0;
+let camStartX = 0, camStartY = 0;
+let selectedTile = null;
+let buildingLabels = [];
+const resources = { wood: 0, gold: 0, food: 0 };
+let speed100x = false;
+
+// ====== 建造模式状态 ======
+let placementMode = null;
+let ghostTile = null;
+let ghostValid = false;
+
+const buildingTypes = [
+  { type: 'town-center', name: '城镇中心' },
+  { type: 'barracks',    name: '兵营' },
+  { type: 'stable',      name: '马厩' },
+  { type: 'church',      name: '教堂' },
+  { type: 'market',      name: '市场' },
+  { type: 'house',       name: '房屋' },
+  { type: 'lumber-camp', name: '伐木场' },
+  { type: 'mining-camp', name: '采矿场' },
+  { type: 'mill',        name: '磨坊' },
+];
+
+const buildingData = {
+  'lumber-camp': { resourceType: 'wood', gatherRange: 3, gatherRate: 0.04 },
+  'mining-camp': { resourceType: 'gold', gatherRange: 3, gatherRate: 0.03 },
+  'mill':        { resourceType: 'food', gatherRange: 3, gatherRate: 0.04 },
+};
+
+function placeBuilding(r, c, building) {
+  if (r < 0 || r >= MAP_N || c < 0 || c >= MAP_N) return false;
+  const cell = map[r][c];
+  if (cell.terrain.name === '水') return false;
+  if (cell.object) return false;
+  const obj = { type: building.type, name: building.name };
+  const bd = buildingData[building.type];
+  if (bd) {
+    obj.gatherProgress = 0;
+    obj.resourcesCollected = 0;
+    obj.gatherRate = bd.gatherRate;
+    obj.resourceType = bd.resourceType;
+    obj.gatherRange = bd.gatherRange;
+  }
+  cell.object = obj;
+  return true;
+}
+
+function cancelPlacement() {
+  placementMode = null;
+  ghostTile = null;
+  ghostValid = false;
+  document.querySelectorAll('.building-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('placementHint').style.display = 'none';
+  canvas.style.cursor = 'grab';
+}
+
+// ====== 建筑面板事件 ======
+document.querySelectorAll('.building-item').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const type = el.dataset.type;
+    const building = buildingTypes.find(b => b.type === type);
+    if (!building) return;
+    if (placementMode && placementMode.type === type) {
+      cancelPlacement();
+      return;
+    }
+    cancelPlacement();
+    placementMode = { type: building.type, name: building.name };
+    el.classList.add('active');
+    document.getElementById('placementHint').style.display = 'block';
+    canvas.style.cursor = 'crosshair';
+  });
+});
+
+// ====== 地图数据 ======
+const terrainTypes = [
+  { name: '草地',  color: '#4a8c3f', dark: '#2d6b28', light: '#6abf5a' },
+  { name: '森林',  color: '#2d5a1e', dark: '#1a3d10', light: '#4a8c32' },
+  { name: '水',    color: '#3a7bd5', dark: '#1f4f8a', light: '#5a9eff' },
+  { name: '沙滩',  color: '#d4b86a', dark: '#a08a40', light: '#f0da90' },
+  { name: '金矿',  color: '#d4a830', dark: '#a07a20', light: '#f0d060' },
+];
+
+// ====== 地形生成（高度图 → 连续生物群系） ======
+function generateMap() {
+  // 1) 平滑高度图
+  const h = Array.from({length: MAP_N}, () => Array(MAP_N).fill(0));
+  const numHills = 15 + Math.floor(Math.random() * 15);
+  for (let i = 0; i < numHills; i++) {
+    const cx = Math.random() * (MAP_N - 1);
+    const cy = Math.random() * (MAP_N - 1);
+    const radius = 10 + Math.random() * 20;
+    const peak = 0.3 + Math.random() * 0.5;
+    for (let rw = 0; rw < MAP_N; rw++)
+      for (let cl = 0; cl < MAP_N; cl++) {
+        const dist = Math.hypot(rw - cy, cl - cx);
+        const t = Math.max(0, 1 - dist / radius);
+        h[rw][cl] += peak * t * t * (3 - 2 * t);
+      }
+  }
+  for (let rw = 0; rw < MAP_N; rw++)
+    for (let cl = 0; cl < MAP_N; cl++)
+      h[rw][cl] += (Math.random() - 0.5) * 0.04;
+
+  // 归一化
+  let maxH = 0;
+  for (let rw = 0; rw < MAP_N; rw++)
+    for (let cl = 0; cl < MAP_N; cl++)
+      if (h[rw][cl] > maxH) maxH = h[rw][cl];
+  if (maxH > 0)
+    for (let rw = 0; rw < MAP_N; rw++)
+      for (let cl = 0; cl < MAP_N; cl++)
+        h[rw][cl] /= maxH;
+
+  // 2) 按高度分配地形
+  const m = [];
+  for (let r = 0; r < MAP_N; r++) {
+    m[r] = [];
+    for (let c = 0; c < MAP_N; c++) {
+      const v = h[r][c];
+      let t;
+      if      (v < 0.15) t = terrainTypes[2];
+      else if (v < 0.30) t = terrainTypes[0];
+      else               t = terrainTypes[0];
+      const height = t.name === '水' ? 0 : Math.floor(v * TILE_H_MAX * 0.85 + Math.random() * TILE_H_MAX * 0.15);
+      m[r][c] = { terrain: t, height, object: null, resource: null };
+    }
+  }
+
+  // 森林簇生成（8-15簇，每簇20-50片）
+  const forestType = terrainTypes[1];
+  const numForestClusters = 8 + Math.floor(Math.random() * 8);
+  for (let i = 0; i < numForestClusters; i++) {
+    let attempts = 0;
+    let rr, cc;
+    do {
+      rr = Math.floor(Math.random() * MAP_N);
+      cc = Math.floor(Math.random() * MAP_N);
+      attempts++;
+    } while (attempts < 30 && m[rr][cc].terrain.name !== '草地');
+    if (m[rr][cc].terrain.name !== '草地') continue;
+    const size = 20 + Math.floor(Math.random() * 31);
+    const queue = [{ r: rr, c: cc }];
+    const visited = new Set();
+    let placed = 0;
+    while (queue.length > 0 && placed < size) {
+      const idx = Math.floor(Math.random() * queue.length);
+      const cur = queue.splice(idx, 1)[0];
+      const key = cur.r + ',' + cur.c;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (cur.r < 0 || cur.r >= MAP_N || cur.c < 0 || cur.c >= MAP_N) continue;
+      if (m[cur.r][cur.c].terrain.name !== '草地') continue;
+      m[cur.r][cur.c].terrain = forestType;
+      m[cur.r][cur.c].resource = { type: 'wood', amount: 60 + Math.floor(Math.random() * 91), maxAmount: 0 };
+      m[cur.r][cur.c].resource.maxAmount = m[cur.r][cur.c].resource.amount;
+      placed++;
+      if (placed >= size) break;
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nr = cur.r + dr, nc = cur.c + dc;
+        const nk = nr + ',' + nc;
+        if (!visited.has(nk) && nr >= 0 && nr < MAP_N && nc >= 0 && nc < MAP_N)
+          queue.push({ r: nr, c: nc });
+      }
+    }
+  }
+
+  // 沿海沙滩
+  for (let r = 0; r < MAP_N; r++)
+    for (let c = 0; c < MAP_N; c++) {
+      if (m[r][c].terrain.name === '水') continue;
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < MAP_N && nc >= 0 && nc < MAP_N && m[nr][nc].terrain.name === '水') {
+          m[r][c].terrain = terrainTypes[3];
+          break;
+        }
+      }
+    }
+
+  // 3) 放置金矿簇（1-5连片，少量）
+  const goldType = terrainTypes[4];
+  const numClusters = 3 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < numClusters * 5; i++) {
+    const rr = Math.floor(Math.random() * MAP_N);
+    const cc = Math.floor(Math.random() * MAP_N);
+    if (m[rr][cc].terrain.name === '水' || m[rr][cc].terrain.name === '金矿') continue;
+    const size = 1 + Math.floor(Math.random() * 5);
+    const queue = [{ r: rr, c: cc }];
+    const visited = new Set();
+    let placed = 0;
+    while (queue.length > 0 && placed < size) {
+      const idx = Math.floor(Math.random() * queue.length);
+      const cur = queue.splice(idx, 1)[0];
+      const key = cur.r + ',' + cur.c;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (cur.r < 0 || cur.r >= MAP_N || cur.c < 0 || cur.c >= MAP_N) continue;
+      if (m[cur.r][cur.c].terrain.name === '水' || m[cur.r][cur.c].terrain.name === '金矿') continue;
+      m[cur.r][cur.c].terrain = goldType;
+      m[cur.r][cur.c].object = { type: 'gold-mine', name: '金矿' };
+      m[cur.r][cur.c].resource = { type: 'gold', amount: 30 + Math.floor(Math.random() * 51), maxAmount: 0 };
+      m[cur.r][cur.c].resource.maxAmount = m[cur.r][cur.c].resource.amount;
+      placed++;
+      if (placed >= size) break;
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,1]]) {
+        const nr = cur.r + dr, nc = cur.c + dc;
+        const nk = nr + ',' + nc;
+        if (!visited.has(nk) && nr >= 0 && nr < MAP_N && nc >= 0 && nc < MAP_N && m[nr][nc].terrain.name !== '水' && m[nr][nc].terrain.name !== '金矿') {
+          queue.push({ r: nr, c: nc });
+        }
+      }
+    }
+  }
+
+  // 4) 浆果丛（食物来源）
+  const numBerryClusters = 5 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < numBerryClusters; i++) {
+    let attempts = 0;
+    let rr, cc;
+    do {
+      rr = Math.floor(Math.random() * MAP_N);
+      cc = Math.floor(Math.random() * MAP_N);
+      attempts++;
+    } while (attempts < 30 && (m[rr][cc].terrain.name !== '草地' || m[rr][cc].object));
+    if (m[rr][cc].terrain.name !== '草地' || m[rr][cc].object) continue;
+    const size = 2 + Math.floor(Math.random() * 4);
+    const queue = [{ r: rr, c: cc }];
+    const visited = new Set();
+    let placed = 0;
+    while (queue.length > 0 && placed < size) {
+      const idx = Math.floor(Math.random() * queue.length);
+      const cur = queue.splice(idx, 1)[0];
+      const key = cur.r + ',' + cur.c;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      if (cur.r < 0 || cur.r >= MAP_N || cur.c < 0 || cur.c >= MAP_N) continue;
+      if (m[cur.r][cur.c].terrain.name !== '草地' || m[cur.r][cur.c].object) continue;
+      m[cur.r][cur.c].resource = { type: 'food', amount: 30 + Math.floor(Math.random() * 51), maxAmount: 0 };
+      m[cur.r][cur.c].resource.maxAmount = m[cur.r][cur.c].resource.amount;
+      placed++;
+      if (placed >= size) break;
+      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nr = cur.r + dr, nc = cur.c + dc;
+        const nk = nr + ',' + nc;
+        if (!visited.has(nk) && nr >= 0 && nr < MAP_N && nc >= 0 && nc < MAP_N)
+          queue.push({ r: nr, c: nc });
+      }
+    }
+  }
+
+  return m;
+}
+
+const map = generateMap();
+
+// ====== 屏幕 ↔ 像素坐标转换 ======
+// ISO: 屏幕 x' = (x - y)*tw/2,  y' = (x + y)*th/2 - z
+function mapToScreen(r, c, z) {
+  const zVal = z || 0;
+  const sx = (c - r) * (TILE_W / 2);
+  const sy = (c + r) * (TILE_H / 2) - zVal;
+  return { sx, sy };
+}
+
+function screenToMap(px, py) {
+  // 反推: c + r = 2*py/th, c - r = 2*px/tw
+  const c_plus_r = py / (TILE_H / 2);
+  const c_minus_r = px / (TILE_W / 2);
+  const c = (c_plus_r + c_minus_r) / 2;
+  const r = (c_plus_r - c_minus_r) / 2;
+  return { r, c };
+}
+
+// ====== 点击检测（菱形 + 高度） ======
+function getTileFromScreen(mx, my) {
+  const wx = (mx - W/2) / cam.zoom + W/2 - mapCenterX - cam.x;
+  const wy = (my - H/2) / cam.zoom + H/2 - mapCenterY - cam.y;
+
+  const { r: fr, c: fc } = screenToMap(wx, wy);
+  const guessR = Math.round(fr);
+  const guessC = Math.round(fc);
+
+  let best = null;
+  let bestDist = Infinity;
+
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      const rr = guessR + dr;
+      const cc = guessC + dc;
+      if (rr < 0 || rr >= MAP_N || cc < 0 || cc >= MAP_N) continue;
+
+      const sx = (cc - rr) * (TILE_W/2);
+      const sy = (cc + rr) * (TILE_H/2) - map[rr][cc].height;
+
+      const dx = wx - sx, dy = wy - sy;
+      const nx = dx / (TILE_W/2), ny = dy / (TILE_H/2);
+      if (Math.abs(nx) + Math.abs(ny) <= 1) {
+        const dist = Math.abs(nx) + Math.abs(ny);
+        if (dist < bestDist) { bestDist = dist; best = { r: rr, c: cc }; }
+      }
+    }
+  }
+  return best;
+}
+
+// ====== 绘制菱形地块（原版透视 + 垂直侧壁） ======
+function drawTile(r, c, cell) {
+  const tw = TILE_W / 2, th = TILE_H / 2, h = cell.height;
+  const sx = (c - r) * tw + cam.x;
+  const sy = (c + r) * th - h + cam.y;
+
+  const top  = { x: sx, y: sy - th };
+  const bot  = { x: sx, y: sy + th };
+  const left = { x: sx - tw, y: sy };
+  const right= { x: sx + tw, y: sy };
+
+  const t = cell.terrain;
+  // 顶面
+  ctx.beginPath(); ctx.moveTo(top.x,top.y); ctx.lineTo(right.x,right.y);
+  ctx.lineTo(bot.x,bot.y); ctx.lineTo(left.x,left.y); ctx.closePath();
+  ctx.fillStyle = t.color; ctx.fill();
+
+  if (t.name === '水') {
+    // 水面只在与非水相邻的边上画格线
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.5;
+    const adj = (rr, cc) => rr >= 0 && rr < MAP_N && cc >= 0 && cc < MAP_N ? map[rr][cc] : null;
+    const tr = adj(r - 1, c);
+    const rb = adj(r, c + 1);
+    const bl = adj(r + 1, c);
+    const lt = adj(r, c - 1);
+    if (!tr || tr.terrain.name !== '水') { ctx.beginPath(); ctx.moveTo(top.x,top.y); ctx.lineTo(right.x,right.y); ctx.stroke(); }
+    if (!rb || rb.terrain.name !== '水') { ctx.beginPath(); ctx.moveTo(right.x,right.y); ctx.lineTo(bot.x,bot.y); ctx.stroke(); }
+    if (!bl || bl.terrain.name !== '水') { ctx.beginPath(); ctx.moveTo(bot.x,bot.y); ctx.lineTo(left.x,left.y); ctx.stroke(); }
+    if (!lt || lt.terrain.name !== '水') { ctx.beginPath(); ctx.moveTo(left.x,left.y); ctx.lineTo(top.x,top.y); ctx.stroke(); }
+  } else {
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 0.5; ctx.stroke();
+  }
+
+  // 右侧壁（暗面）
+  if (h > 0) {
+    ctx.beginPath(); ctx.moveTo(right.x,right.y); ctx.lineTo(bot.x,bot.y);
+    ctx.lineTo(bot.x,bot.y + h); ctx.lineTo(right.x,right.y + h); ctx.closePath();
+    ctx.fillStyle = t.dark; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 左侧壁（亮面）
+    ctx.beginPath(); ctx.moveTo(bot.x,bot.y); ctx.lineTo(left.x,left.y);
+    ctx.lineTo(left.x,left.y + h); ctx.lineTo(bot.x,bot.y + h); ctx.closePath();
+    ctx.fillStyle = t.light; ctx.fill();
+    ctx.stroke();
+  }
+
+  // 选中高亮
+  if (selectedTile && selectedTile.r === r && selectedTile.c === c) {
+    ctx.beginPath(); ctx.moveTo(top.x,top.y); ctx.lineTo(right.x,right.y);
+    ctx.lineTo(bot.x,bot.y); ctx.lineTo(left.x,left.y); ctx.closePath();
+    ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 3;
+    ctx.shadowColor = '#ffe066'; ctx.shadowBlur = 12; ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // 资源指示（散落分布）
+  if (cell.resource && cell.resource.amount > 0) {
+    const pct = cell.resource.amount / cell.resource.maxAmount;
+    const totalIcons = 5;
+    const count = Math.min(totalIcons, Math.floor(pct * totalIcons) + 1);
+    const tw2 = TILE_W / 2, th2 = TILE_H / 2;
+    const layouts = [
+      [0, -0.45],
+      [-0.45, 0],
+      [0.45, 0],
+      [-0.25, 0.4],
+      [0.25, 0.4],
+    ];
+    for (let i = 0; i < count; i++) {
+      const px = layouts[i][0];
+      const py = layouts[i][1];
+      const ix = sx + px * tw2;
+      const iy = sy + py * th2;
+      if (cell.resource.type === 'wood') {
+        ctx.fillStyle = '#1d6b1d';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 9); ctx.lineTo(ix - 8, iy + 3); ctx.lineTo(ix + 8, iy + 3); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2d8a2d';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 14); ctx.lineTo(ix - 5, iy - 1); ctx.lineTo(ix + 5, iy - 1); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#3aaa3a';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 17); ctx.lineTo(ix - 3, iy - 6); ctx.lineTo(ix + 3, iy - 6); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#5a3a1a';
+        ctx.fillRect(ix - 1.5, iy + 2, 3, 6);
+      } else if (cell.resource.type === 'gold') {
+        ctx.fillStyle = '#4a3a28';
+        ctx.beginPath();
+        ctx.ellipse(ix, iy + 3, 5, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f0d060';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 8); ctx.lineTo(ix - 4.5, iy); ctx.lineTo(ix, iy + 1.5); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#ffe890';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 8); ctx.lineTo(ix, iy + 1.5); ctx.lineTo(ix + 4.5, iy); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#d4a830';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 4.5); ctx.lineTo(ix - 3, iy + 1.5); ctx.lineTo(ix, iy + 3); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#fff8e0';
+        ctx.beginPath();
+        ctx.moveTo(ix, iy - 8); ctx.lineTo(ix - 1.5, iy - 1.5); ctx.lineTo(ix, iy); ctx.closePath();
+        ctx.fill();
+      } else if (cell.resource.type === 'food') {
+        ctx.strokeStyle = '#3a7a3a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ix + 1.5, iy - 4.5); ctx.lineTo(ix - 1.5, iy + 3); ctx.stroke();
+        const bps = [[-3, -1.5], [3, -1.5], [0, 3]];
+        for (const [bx, by] of bps) {
+          ctx.fillStyle = '#ee3333';
+          ctx.beginPath();
+          ctx.arc(ix + bx, iy + by, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.2)';
+          ctx.beginPath();
+          ctx.arc(ix + bx - 1, iy + by - 1, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#4a9a4a';
+        ctx.beginPath();
+        ctx.ellipse(ix + 4.5, iy - 4.5, 3, 1.5, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // 小型资源条（仅选中时显示）
+    if (selectedTile && selectedTile.r === r && selectedTile.c === c && cell.resource.maxAmount > 0) {
+      const pct2 = cell.resource.amount / cell.resource.maxAmount;
+      const barW = 14, barH = 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(sx - barW/2, sy - th - 3, barW, barH);
+      const colors = { wood: '#6abf5a', gold: '#f0d060', food: '#ff6666' };
+      ctx.fillStyle = colors[cell.resource.type] || '#fff';
+      ctx.fillRect(sx - barW/2, sy - th - 3, barW * pct2, barH);
+    }
+  }
+
+  // 物体/装饰
+  if (cell.object) {
+    const objY = cell.object.type === 'gold-mine' ? sy + th * 0.15 : sy - th;
+    drawObject(sx, objY, cell.object);
+  }
+}
+
+// ====== 绘制物体 ======
+function drawObject(x, y, obj) {
+  if (obj.type === 'town-center') {
+    const hw = 17, hh = 8;
+    const floorH = [11, 9, 7];
+    const totalH = floorH.reduce((a,b)=>a+b, 0);
+    const roofH = 11;
+    const spireH = 13;
+    const L = Math.sqrt(hw * hw + hh * hh);
+    const baseY = y + TILE_H * 0.72;
+    const fcx = x, fcy = baseY;
+    const lbx = x - hw, lby = baseY - hh;
+    const rbx = x + hw, rby = baseY - hh;
+    const lpt = (t, h) => ({ x: fcx + (lbx - fcx) * t, y: fcy + (lby - fcy) * t - h });
+    const rpt = (t, h) => ({ x: fcx + (rbx - fcx) * t, y: fcy + (rby - fcy) * t - h });
+
+    const drawParWin = (face, t, h, w, wh, centerLine) => {
+      const pt = face === 'l' ? lpt : rpt;
+      const halfT = w / (2 * L);
+      const bl = pt(t - halfT, h);
+      const br = pt(t + halfT, h);
+      const tl = pt(t - halfT, h + wh);
+      const tr = pt(t + halfT, h + wh);
+      ctx.fillStyle = '#c8a87a';
+      ctx.beginPath();
+      ctx.moveTo(bl.x, bl.y); ctx.lineTo(br.x, br.y);
+      ctx.lineTo(tr.x, tr.y); ctx.lineTo(tl.x, tl.y);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#5a3a1e';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      if (centerLine) {
+        const cx = (bl.x + br.x) / 2;
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, bl.y);
+        ctx.lineTo(cx, tl.y);
+        ctx.stroke();
+      }
+    };
+
+    // 地基
+    ctx.fillStyle = '#5a4a3a';
+    ctx.beginPath();
+    ctx.moveTo(fcx, fcy); ctx.lineTo(lbx, lby);
+    ctx.lineTo(lbx - 2, lby - 2); ctx.lineTo(fcx - 2, fcy - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(fcx, fcy); ctx.lineTo(rbx, rby);
+    ctx.lineTo(rbx + 2, rby - 2); ctx.lineTo(fcx + 2, fcy - 2);
+    ctx.closePath();
+    ctx.fillStyle = '#3a2a1a'; ctx.fill();
+
+    // === 三层墙体 ===
+    let hSoFar = 0;
+    const lCols = ['#9B7B5A','#A08060','#A88A6A'];
+    const rCols = ['#7a5a3a','#8a6a4a','#907050'];
+
+    for (let f = 0; f < 3; f++) {
+      const fh = floorH[f], h0 = hSoFar, h1 = hSoFar + fh;
+      hSoFar = h1;
+
+      ctx.fillStyle = lCols[f];
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h0); ctx.lineTo(lbx, lby - h0);
+      ctx.lineTo(lbx, lby - h1); ctx.lineTo(fcx, fcy - h1);
+      ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = rCols[f];
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h0); ctx.lineTo(rbx, rby - h0);
+      ctx.lineTo(rbx, rby - h1); ctx.lineTo(fcx, fcy - h1);
+      ctx.closePath(); ctx.fill();
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h0); ctx.lineTo(lbx, lby - h0);
+      ctx.lineTo(lbx, lby - h1); ctx.lineTo(fcx, fcy - h1);
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h0); ctx.lineTo(rbx, rby - h0);
+      ctx.lineTo(rbx, rby - h1); ctx.lineTo(fcx, fcy - h1);
+      ctx.closePath(); ctx.stroke();
+
+      if (f < 2) {
+        ctx.fillStyle = '#4a2a10';
+        ctx.beginPath();
+        ctx.moveTo(fcx, fcy - h1); ctx.lineTo(lbx, lby - h1);
+        ctx.lineTo(lbx, lby - h1 - 2); ctx.lineTo(fcx, fcy - h1 - 2);
+        ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(fcx, fcy - h1); ctx.lineTo(rbx, rby - h1);
+        ctx.lineTo(rbx, rby - h1 - 2); ctx.lineTo(fcx, fcy - h1 - 2);
+        ctx.closePath();
+        ctx.fillStyle = '#2a1a08'; ctx.fill();
+      }
+    }
+
+    // 前棱边
+    ctx.strokeStyle = '#4a2a10';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(fcx, fcy); ctx.lineTo(fcx, fcy - totalH);
+    ctx.stroke();
+
+    // 石材纹路
+    ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+    ctx.lineWidth = 0.5;
+    for (let row = 1; row < 10; row++) {
+      const h = row * totalH / 10;
+      if (h > totalH) break;
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h);
+      ctx.lineTo(lbx, lby - h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(fcx, fcy - h);
+      ctx.lineTo(rbx, rby - h);
+      ctx.stroke();
+    }
+
+    // === 一层：门（左面）+ 窗 ===
+    const dh = 7;
+    drawParWin('l', 0.22, 0, 6, dh, false);
+    ctx.fillStyle = '#2a1008';
+    ctx.beginPath();
+    const hdt = 6 / (2 * L);
+    const db = lpt(0.22 - hdt, 0);
+    const dt2 = lpt(0.22 + hdt, 0);
+    const dbl = lpt(0.22 - hdt, dh);
+    const dtl = lpt(0.22 + hdt, dh);
+    ctx.moveTo(db.x, db.y); ctx.lineTo(dt2.x, dt2.y);
+    ctx.lineTo(dtl.x, dtl.y); ctx.lineTo(dbl.x, dbl.y);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#6a4a2a';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.strokeStyle = '#3a1e08';
+    ctx.lineWidth = 0.5;
+    const mid = (db.x + dt2.x) / 2;
+    ctx.beginPath();
+    ctx.moveTo(mid, db.y); ctx.lineTo(mid, dbl.y);
+    ctx.stroke();
+
+    drawParWin('l', 0.6, floorH[0] * 0.25, 4, 5, true);
+    drawParWin('r', 0.6, floorH[0] * 0.25, 4, 5, true);
+
+    // === 二层：每面两扇窗 ===
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 2; i++) {
+        const t = 0.25 + i * 0.35;
+        const h = floorH[0] + floorH[1] * 0.3;
+        drawParWin(side === -1 ? 'l' : 'r', t, h, 4, 5, true);
+      }
+    }
+
+    // === 三层：圆窗 ===
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 2; i++) {
+        const t = 0.25 + i * 0.35;
+        const h = floorH[0] + floorH[1] + floorH[2] * 0.35;
+        const p = side === -1 ? lpt(t, h) : rpt(t, h);
+        ctx.fillStyle = '#c8a87a';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#5a3a1e';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // === 屋顶 ===
+    const rf = totalH;
+    const rp = fcy - totalH - roofH;
+    const e = 3;
+
+    ctx.fillStyle = '#7a4a28';
+    ctx.beginPath();
+    ctx.moveTo(fcx - e, fcy - rf - e/2);
+    ctx.lineTo(lbx - e, lby - rf - e/2);
+    ctx.lineTo(fcx, rp);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5a3a1a';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#5a3a1a';
+    ctx.beginPath();
+    ctx.moveTo(fcx + e, fcy - rf - e/2);
+    ctx.lineTo(rbx + e, rby - rf - e/2);
+    ctx.lineTo(fcx, rp);
+    ctx.closePath(); ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i < 4; i++) {
+      const t = i / 4;
+      const bx = (fcx - e) + ((lbx - e) - (fcx - e)) * t;
+      const by = (fcy - rf - e/2) + ((lby - rf - e/2) - (fcy - rf - e/2)) * t;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(fcx, rp + t * (fcy - rf - rp));
+      ctx.stroke();
+      const bx2 = (fcx + e) + ((rbx + e) - (fcx + e)) * t;
+      const by2 = (fcy - rf - e/2) + ((rby - rf - e/2) - (fcy - rf - e/2)) * t;
+      ctx.beginPath();
+      ctx.moveTo(bx2, by2);
+      ctx.lineTo(fcx, rp + t * (fcy - rf - rp));
+      ctx.stroke();
+    }
+
+    // === 城垛 ===
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 3; i++) {
+        const onLeft = side === -1;
+        const segT0 = i / 3;
+        const segT1 = (i + 0.5) / 3;
+        const ax = onLeft ? fcx + (lbx - fcx) * segT0 : fcx + (rbx - fcx) * segT0;
+        const ay = (onLeft ? fcy + (lby - fcy) * segT0 : fcy + (rby - fcy) * segT0) - rf;
+        const bx = onLeft ? fcx + (lbx - fcx) * segT1 : fcx + (rbx - fcx) * segT1;
+        const by = (onLeft ? fcy + (lby - fcy) * segT1 : fcy + (rby - fcy) * segT1) - rf;
+        const ch = 4;
+        ctx.fillStyle = onLeft ? '#9B7B5A' : '#7a5a3a';
+        ctx.beginPath();
+        ctx.moveTo(ax, ay - ch);
+        ctx.lineTo(bx, by - ch);
+        ctx.lineTo(bx, by);
+        ctx.lineTo(ax, ay);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#5a3a1e';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+
+    // === 中央尖塔 ===
+    ctx.fillStyle = '#6a4a28';
+    ctx.beginPath();
+    ctx.moveTo(fcx - 2.5, rp);
+    ctx.lineTo(fcx, rp - spireH);
+    ctx.lineTo(fcx + 2.5, rp);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#4a2a10';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(fcx, rp - spireH);
+    ctx.lineTo(fcx + 2.5, rp);
+    ctx.lineTo(fcx + 3, rp - 1.5);
+    ctx.lineTo(fcx + 0.5, rp - spireH - 1.5);
+    ctx.closePath();
+    ctx.fillStyle = '#4a2a10';
+    ctx.fill();
+
+    ctx.fillStyle = '#d4a830';
+    ctx.beginPath();
+    ctx.arc(fcx, rp - spireH, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f0d060';
+    ctx.beginPath();
+    ctx.arc(fcx - 0.3, rp - spireH - 0.3, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === 旗帜 ===
+    ctx.fillStyle = '#7a5a3a';
+    ctx.fillRect(fcx + 6, rp - 2, 1, 11);
+    ctx.fillStyle = '#cc2222';
+    ctx.beginPath();
+    ctx.moveTo(fcx + 7.5, rp - 2);
+    ctx.lineTo(fcx + 13, rp + 2);
+    ctx.lineTo(fcx + 7.5, rp + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // === 阳台 ===
+    const balcH = floorH[0];
+    ctx.fillStyle = '#6a5a4a';
+    ctx.beginPath();
+    ctx.moveTo(fcx - 7, fcy - balcH);
+    ctx.lineTo(fcx + 7, fcy - balcH);
+    ctx.lineTo(fcx + 5, fcy - balcH - 4);
+    ctx.lineTo(fcx - 5, fcy - balcH - 4);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5a3a1e';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const bx = fcx - 5 + i * 5;
+      ctx.beginPath();
+      ctx.moveTo(bx, fcy - balcH - 1.5);
+      ctx.lineTo(bx, fcy - balcH - 4);
+      ctx.stroke();
+    }
+
+    buildingLabels.push({ x: fcx, y: fcy - 4, name: obj.name });
+  } else if (obj.type === 'gold-mine') {
+    // 金矿 — 地面晶体
+    const baseY = y;
+
+    ctx.fillStyle = '#4a3a28';
+    ctx.beginPath();
+    ctx.moveTo(x - 8, baseY + 2);
+    ctx.quadraticCurveTo(x - 6, baseY - 3, x - 3, baseY - 2);
+    ctx.quadraticCurveTo(x, baseY - 4, x + 3, baseY - 1);
+    ctx.quadraticCurveTo(x + 8, baseY - 2, x + 6, baseY + 2);
+    ctx.quadraticCurveTo(x + 3, baseY + 4, x - 3, baseY + 3);
+    ctx.quadraticCurveTo(x - 8, baseY + 3, x - 8, baseY + 2);
+    ctx.closePath();
+    ctx.fill();
+
+    const facets = [
+      { pts: [[-4,-1],[-3,-8],[0,-5]], color: '#f0d060' },
+      { pts: [[0,-5],[2,-10],[4,-6]], color: '#ffe890' },
+      { pts: [[4,-6],[7,-4],[5,-1]], color: '#f0d060' },
+      { pts: [[-2,-1],[-5,1],[-4,-4]], color: '#d4a830' },
+      { pts: [[0,-5],[-3,-8],[0,-11]], color: '#fff8e0' },
+      { pts: [[0,-5],[0,-11],[2,-10]], color: '#ffe890' },
+    ];
+    for (const f of facets) {
+      ctx.fillStyle = f.color;
+      ctx.beginPath();
+      ctx.moveTo(x + f.pts[0][0], baseY + f.pts[0][1]);
+      ctx.lineTo(x + f.pts[1][0], baseY + f.pts[1][1]);
+      ctx.lineTo(x + f.pts[2][0], baseY + f.pts[2][1]);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (obj.type === 'barracks') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 14, h = 8;
+    const wallH = 12;
+    const lCol = '#8a7a6a', rCol = '#6a5a4a';
+    const roofCol = '#7a3a1a', roofDark = '#5a2a10';
+    // 左墙
+    ctx.fillStyle = lCol;
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x - w, baseY - h);
+    ctx.lineTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 右墙
+    ctx.fillStyle = rCol;
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + w, baseY - h);
+    ctx.lineTo(x + w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 石材纹路
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    for (let row = 1; row < 5; row++) {
+      const yy = baseY - row * wallH / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, yy);
+      ctx.lineTo(x - w, yy - row * h / 5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, yy);
+      ctx.lineTo(x + w, yy - row * h / 5);
+      ctx.stroke();
+    }
+    // 门洞（左面）
+    ctx.fillStyle = '#3a2a1a';
+    ctx.beginPath();
+    ctx.moveTo(x - 6, baseY - 1);
+    ctx.lineTo(x - 3, baseY - 3);
+    ctx.lineTo(x - 3, baseY - 7);
+    ctx.lineTo(x - 6, baseY - 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 窗户（左面）
+    ctx.fillStyle = '#c8a87a';
+    ctx.fillRect(x - 10, baseY - h - 8, 3, 4);
+    ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - 10, baseY - h - 8, 3, 4);
+    // 窗户（右面）
+    ctx.fillStyle = '#c8a87a';
+    ctx.fillRect(x + 4, baseY - h - 8, 3, 4);
+    ctx.strokeRect(x + 4, baseY - h - 8, 3, 4);
+    // 屋顶
+    ctx.fillStyle = roofCol;
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH);
+    ctx.lineTo(x - w - 2, baseY - h - wallH - 3);
+    ctx.lineTo(x, baseY - wallH - 9);
+    ctx.lineTo(x + w + 2, baseY - h - wallH - 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = roofDark; ctx.lineWidth = 0.5; ctx.stroke();
+    // 屋顶瓦片纹路
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i < 4; i++) {
+      const t = i / 4;
+      const lx = x + (x - w - 2 - x) * t;
+      const ly = (baseY - wallH) + ((baseY - h - wallH - 3) - (baseY - wallH)) * t;
+      const rx = x + (x + w + 2 - x) * t;
+      const ry = (baseY - wallH) + ((baseY - h - wallH - 3) - (baseY - wallH)) * t;
+      const topY = (baseY - wallH) + ((baseY - wallH - 9) - (baseY - wallH)) * t;
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, topY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(x, topY); ctx.stroke();
+    }
+    // 旗杆
+    ctx.fillStyle = '#6a4a2a';
+    ctx.fillRect(x - 3, baseY - wallH - 14, 1.5, 7);
+    ctx.fillStyle = '#cc2222';
+    ctx.beginPath();
+    ctx.moveTo(x - 1.5, baseY - wallH - 14);
+    ctx.lineTo(x + 4, baseY - wallH - 11);
+    ctx.lineTo(x - 1.5, baseY - wallH - 8);
+    ctx.closePath();
+    ctx.fill();
+    buildingLabels.push({ x, y: baseY - wallH - 18, name: obj.name });
+  } else if (obj.type === 'stable') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 15, h = 8;
+    const wallH = 9;
+    // 左墙（木板）
+    ctx.fillStyle = '#9a8a6a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x - w, baseY - h);
+    ctx.lineTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#6a5a3a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 右墙
+    ctx.fillStyle = '#7a6a4a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + w, baseY - h);
+    ctx.lineTo(x + w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 木板纹路
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i < 4; i++) {
+      const t = i / 4;
+      const ly = baseY - t * wallH;
+      const lx = x + (x - w - x) * t;
+      const rx = x + (x + w - x) * t;
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, ly); ctx.stroke();
+    }
+    // 大车门（左面开口）
+    ctx.fillStyle = '#3a2a1a';
+    ctx.beginPath();
+    ctx.moveTo(x - 9, baseY - 2);
+    ctx.lineTo(x - 4, baseY - 4);
+    ctx.lineTo(x - 4, baseY - 9);
+    ctx.lineTo(x - 9, baseY - 7);
+    ctx.closePath();
+    ctx.fill();
+    // 门上横梁
+    ctx.fillStyle = '#5a4a2a';
+    ctx.fillRect(x - 10, baseY - h - 8.5, 7, 1.5);
+    // 干草棚（上层开口）
+    ctx.fillStyle = '#b8a060';
+    ctx.fillRect(x + 2, baseY - h - 7, 5, 3);
+    ctx.strokeStyle = '#6a5a3a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x + 2, baseY - h - 7, 5, 3);
+    // 屋顶（茅草/瓦片）
+    ctx.fillStyle = '#6a4a2a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH);
+    ctx.lineTo(x - w - 2, baseY - h - wallH - 2);
+    ctx.lineTo(x, baseY - wallH - 8);
+    ctx.lineTo(x + w + 2, baseY - h - wallH - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 屋顶茅草纹理
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    for (let i = 0; i < 5; i++) {
+      const t = (i + 0.5) / 5;
+      const yOff = t * (baseY - wallH - ((baseY - wallH - 8))) + (baseY - wallH - 8);
+      const lx = x + (x - w - 2 - x) * t;
+      const ly = (baseY - wallH) + ((baseY - h - wallH - 2) - (baseY - wallH)) * t;
+      const rx = x + (x + w + 2 - x) * t;
+      const ry = (baseY - wallH) + ((baseY - h - wallH - 2) - (baseY - wallH)) * t;
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, yOff); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(x, yOff); ctx.stroke();
+    }
+    // 马头装饰（简单）
+    ctx.fillStyle = '#5a4a3a';
+    ctx.beginPath();
+    ctx.arc(x - 2, baseY - h - 9, 2, 0, Math.PI * 2);
+    ctx.fill();
+    buildingLabels.push({ x, y: baseY - wallH - 12, name: obj.name });
+  } else if (obj.type === 'church') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 11, h = 7;
+    const wallH = 12;
+    // 左墙（石砌）
+    ctx.fillStyle = '#9a9a9a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x - w, baseY - h);
+    ctx.lineTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#6a6a6a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 右墙
+    ctx.fillStyle = '#7a7a7a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + w, baseY - h);
+    ctx.lineTo(x + w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 石材纹路
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = 0.5;
+    for (let row = 1; row < 4; row++) {
+      const yy = baseY - row * wallH / 4;
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.lineTo(x - w, yy - row * h / 4);
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, yy);
+      ctx.lineTo(x + w, yy - row * h / 4);
+      ctx.stroke();
+    }
+    // 哥特式尖拱窗（左面）
+    ctx.fillStyle = '#4a6a9a';
+    ctx.beginPath();
+    ctx.moveTo(x - 7, baseY - h - 2);
+    ctx.lineTo(x - 4, baseY - h - 2);
+    ctx.lineTo(x - 4, baseY - h - 9);
+    ctx.quadraticCurveTo(x - 5.5, baseY - h - 11, x - 7, baseY - h - 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a5a6a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 彩色玻璃纹
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.beginPath(); ctx.moveTo(x - 5.5, baseY - h - 2); ctx.lineTo(x - 5.5, baseY - h - 10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 7, baseY - h - 6); ctx.lineTo(x - 4, baseY - h - 6); ctx.stroke();
+    // 尖拱窗（右面）
+    ctx.fillStyle = '#4a6a9a';
+    ctx.beginPath();
+    ctx.moveTo(x + 4, baseY - h - 2);
+    ctx.lineTo(x + 7, baseY - h - 2);
+    ctx.lineTo(x + 7, baseY - h - 9);
+    ctx.quadraticCurveTo(x + 5.5, baseY - h - 11, x + 4, baseY - h - 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a5a6a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.beginPath(); ctx.moveTo(x + 5.5, baseY - h - 2); ctx.lineTo(x + 5.5, baseY - h - 10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 4, baseY - h - 6); ctx.lineTo(x + 7, baseY - h - 6); ctx.stroke();
+    // 大门（左面）
+    ctx.fillStyle = '#4a3a2a';
+    ctx.beginPath();
+    ctx.moveTo(x - 10, baseY - 1);
+    ctx.lineTo(x - 7, baseY - 3);
+    ctx.lineTo(x - 7, baseY - 6);
+    ctx.quadraticCurveTo(x - 8.5, baseY - 8, x - 10, baseY - 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 钟楼/尖塔
+    ctx.fillStyle = '#8a8a8a';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, baseY - wallH);
+    ctx.lineTo(x + 3, baseY - wallH);
+    ctx.lineTo(x + 3, baseY - wallH - 10);
+    ctx.lineTo(x - 3, baseY - wallH - 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 尖顶
+    ctx.fillStyle = '#6a6a6a';
+    ctx.beginPath();
+    ctx.moveTo(x - 4, baseY - wallH - 10);
+    ctx.lineTo(x + 4, baseY - wallH - 10);
+    ctx.lineTo(x, baseY - wallH - 17);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 十字架
+    ctx.fillStyle = '#d4a830';
+    ctx.fillRect(x - 0.5, baseY - wallH - 21, 1, 5);
+    ctx.fillRect(x - 2.5, baseY - wallH - 19, 5, 1);
+    // 飞扶壁（左）
+    ctx.fillStyle = '#8a8a8a';
+    ctx.beginPath();
+    ctx.moveTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x - w - 3, baseY - h - wallH + 4);
+    ctx.lineTo(x - w - 3, baseY + 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#5a5a5a'; ctx.lineWidth = 0.5; ctx.stroke();
+    buildingLabels.push({ x, y: baseY - wallH - 25, name: obj.name });
+  } else if (obj.type === 'market') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 15, h = 8;
+    const wallH = 7;
+    // 左墙
+    ctx.fillStyle = '#c8a870';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x - w, baseY - h);
+    ctx.lineTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8a7a4a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 右墙
+    ctx.fillStyle = '#a89060';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + w, baseY - h);
+    ctx.lineTo(x + w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 摊位台面（左面）
+    ctx.fillStyle = '#8a7a5a';
+    ctx.fillRect(x - 13, baseY - h - 3, 8, 2);
+    // 右面摊位
+    ctx.fillRect(x + 2, baseY - h - 3, 8, 2);
+    // 货物：桶（左）
+    ctx.fillStyle = '#6a4a2a';
+    ctx.beginPath();
+    ctx.arc(x - 9, baseY - h - 5, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 货物：桶（右）
+    ctx.fillStyle = '#5a3a1a';
+    ctx.beginPath();
+    ctx.arc(x + 6, baseY - h - 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // 彩色条纹遮阳篷
+    for (let i = 0; i < 6; i++) {
+      const t0 = i / 6, t1 = (i + 0.5) / 6;
+      const ax = x - w + (w * 2) * t0, ay = baseY - h - wallH + h * t0;
+      const bx = x - w + (w * 2) * t1, by = baseY - h - wallH + h * t1;
+      ctx.fillStyle = i % 2 === 0 ? '#cc4444' : '#e8d4a0';
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.lineTo(bx, by - 4);
+      ctx.lineTo(ax, ay - 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // 遮阳篷边缘垂布
+    ctx.strokeStyle = '#8a3a3a';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) {
+      const t = (i + 0.5) / 5;
+      const px = x - w + (w * 2) * t;
+      const py = baseY - h - wallH + h * t - 4;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px, py + 2);
+      ctx.stroke();
+    }
+    // 旗子装饰
+    ctx.fillStyle = '#cc2222';
+    ctx.fillRect(x - 1, baseY - wallH - 8, 1, 6);
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH - 8);
+    ctx.lineTo(x + 4, baseY - wallH - 6);
+    ctx.lineTo(x, baseY - wallH - 4);
+    ctx.closePath();
+    ctx.fill();
+    buildingLabels.push({ x, y: baseY - wallH - 12, name: obj.name });
+  } else if (obj.type === 'house') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 10, h = 6;
+    const wallH = 8;
+    // 左墙（白色抹灰）
+    ctx.fillStyle = '#e8dcc8';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x - w, baseY - h);
+    ctx.lineTo(x - w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 右墙
+    ctx.fillStyle = '#d8ccb8';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + w, baseY - h);
+    ctx.lineTo(x + w, baseY - h - wallH);
+    ctx.lineTo(x, baseY - wallH);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // 木框架（黑白木构风格）
+    ctx.strokeStyle = '#5a3a2a';
+    ctx.lineWidth = 1;
+    // 左墙斜撑
+    ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x - w, baseY - h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, baseY - wallH); ctx.lineTo(x - w, baseY - h - wallH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - w * 0.5, baseY - h * 0.5); ctx.lineTo(x - w * 0.5, baseY - h * 0.5 - wallH); ctx.stroke();
+    // 右墙斜撑
+    ctx.beginPath(); ctx.moveTo(x, baseY); ctx.lineTo(x + w, baseY - h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, baseY - wallH); ctx.lineTo(x + w, baseY - h - wallH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.5, baseY - h * 0.5); ctx.lineTo(x + w * 0.5, baseY - h * 0.5 - wallH); ctx.stroke();
+    // 窗户（左面）
+    ctx.fillStyle = '#c8a87a';
+    ctx.fillRect(x - 7, baseY - h - 5, 3, 4);
+    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - 7, baseY - h - 5, 3, 4);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.moveTo(x - 5.5, baseY - h - 5); ctx.lineTo(x - 5.5, baseY - h - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 7, baseY - h - 3); ctx.lineTo(x - 4, baseY - h - 3); ctx.stroke();
+    // 窗户（右面）
+    ctx.fillStyle = '#c8a87a';
+    ctx.fillRect(x + 4, baseY - h - 5, 3, 4);
+    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x + 4, baseY - h - 5, 3, 4);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.moveTo(x + 5.5, baseY - h - 5); ctx.lineTo(x + 5.5, baseY - h - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 4, baseY - h - 3); ctx.lineTo(x + 7, baseY - h - 3); ctx.stroke();
+    // 门
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(x - 3, baseY - 5, 3, 5);
+    ctx.strokeStyle = '#3a1a0a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - 3, baseY - 5, 3, 5);
+    // 门把手
+    ctx.fillStyle = '#d4a830';
+    ctx.fillRect(x - 1.5, baseY - 3, 1, 1);
+    // 茅草屋顶
+    ctx.fillStyle = '#b8863a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH);
+    ctx.lineTo(x - w - 2, baseY - h - wallH - 2);
+    ctx.lineTo(x, baseY - wallH - 8);
+    ctx.lineTo(x + w + 2, baseY - h - wallH - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8a6a2a'; ctx.lineWidth = 0.5; ctx.stroke();
+    // 茅草纹理
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    for (let i = 0; i < 4; i++) {
+      const t = (i + 0.5) / 4;
+      const yOff = (baseY - wallH) * (1 - t) + (baseY - wallH - 8) * t;
+      const lx = x + (x - w - 2 - x) * t;
+      const ly = (baseY - wallH) + ((baseY - h - wallH - 2) - (baseY - wallH)) * t;
+      const rx = x + (x + w + 2 - x) * t;
+      const ry = (baseY - wallH) + ((baseY - h - wallH - 2) - (baseY - wallH)) * t;
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(x, yOff); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(x, yOff); ctx.stroke();
+    }
+    // 烟囱（左面）
+    ctx.fillStyle = '#8a6a4a';
+    ctx.fillRect(x - w - 2, baseY - h - wallH - 8, 3, 6);
+    ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - w - 2, baseY - h - wallH - 8, 3, 6);
+    // 烟囱顶
+    ctx.fillStyle = '#6a4a3a';
+    ctx.fillRect(x - w - 3, baseY - h - wallH - 9, 5, 1.5);
+    // 烟雾
+    ctx.fillStyle = 'rgba(200,200,200,0.15)';
+    ctx.beginPath();
+    ctx.arc(x - w, baseY - h - wallH - 12, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(200,200,200,0.1)';
+    ctx.beginPath();
+    ctx.arc(x - w - 1, baseY - h - wallH - 15, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 小花（左面墙角）
+    ctx.fillStyle = '#e06060';
+    for (let i = 0; i < 4; i++) {
+      const fx = x - w - 3 + (i % 2) * 3;
+      const fy = baseY + 1 - Math.floor(i / 2) * 3;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    buildingLabels.push({ x, y: baseY - wallH - 12, name: obj.name });
+  } else if (obj.type === 'lumber-camp') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 11, h = 6, wallH = 8;
+    ctx.fillStyle = '#8a7a5a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x - w, baseY - h); ctx.lineTo(x - w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5a4a3a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#6a5a4a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x + w, baseY - h); ctx.lineTo(x + w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#5a3a1a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH); ctx.lineTo(x - w - 1, baseY - h - wallH - 2); ctx.lineTo(x, baseY - wallH - 6); ctx.lineTo(x + w + 1, baseY - h - wallH - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#3a1a0a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#7a5a3a';
+    ctx.fillRect(x - w - 3, baseY - h + 1, 2, 4);
+    ctx.fillRect(x - w - 4, baseY - h, 4, 1);
+    ctx.fillStyle = '#6a4a2a';
+    ctx.fillRect(x + 4, baseY - h - 3, 2, 5);
+    buildingLabels.push({ x, y: baseY - wallH - 10, name: obj.name });
+  } else if (obj.type === 'mining-camp') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 10, h = 6, wallH = 7;
+    ctx.fillStyle = '#7a7a6a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x - w, baseY - h); ctx.lineTo(x - w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5a5a4a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#5a5a4a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x + w, baseY - h); ctx.lineTo(x + w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#4a3a2a';
+    ctx.fillRect(x - 5, baseY - 5, 4, 5);
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(x - 5, baseY - 5, 4, 5);
+    ctx.fillStyle = '#8a7a5a';
+    ctx.fillRect(x - w, baseY - h - 1, 4, 1.5);
+    ctx.fillStyle = '#6a4a2a';
+    ctx.beginPath();
+    ctx.arc(x + 4, baseY - h + 1, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#4a2a10'; ctx.lineWidth = 0.5; ctx.stroke();
+    buildingLabels.push({ x, y: baseY - wallH - 10, name: obj.name });
+  } else if (obj.type === 'mill') {
+    const baseY = y + TILE_H * 0.5;
+    const w = 10, h = 6, wallH = 9;
+    ctx.fillStyle = '#b8a070';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x - w, baseY - h); ctx.lineTo(x - w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#8a7a4a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#a08860';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY); ctx.lineTo(x + w, baseY - h); ctx.lineTo(x + w, baseY - h - wallH); ctx.lineTo(x, baseY - wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#6a5a3a';
+    ctx.beginPath();
+    ctx.moveTo(x, baseY - wallH); ctx.lineTo(x - w - 1, baseY - h - wallH - 2); ctx.lineTo(x, baseY - wallH - 7); ctx.lineTo(x + w + 1, baseY - h - wallH - 2);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 0.5; ctx.stroke();
+    ctx.fillStyle = '#c8a870';
+    ctx.fillRect(x - 0.5, baseY - wallH - 10, 1, 5);
+    ctx.fillRect(x - 5, baseY - wallH - 8, 10, 1);
+    ctx.fillStyle = '#7a5a3a';
+    ctx.fillRect(x - 6, baseY - h - 1, 3, 1);
+    ctx.fillRect(x + 2, baseY - h - 1, 3, 1);
+    buildingLabels.push({ x, y: baseY - wallH - 14, name: obj.name });
+  }
+}
+
+// 根据行列生成确定性随机数（避免每帧闪烁）
+function seededRand(r, c, seed) {
+  const x = Math.sin(r * 127.1 + c * 311.7 + (seed || 0)) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+// ====== 绘制网格线（底层参考） ======
+function drawGrid() {
+  for (let r = 0; r <= MAP_N; r++) {
+    for (let c = 0; c <= MAP_N; c++) {
+      const p = mapToScreen(r, c, 0);
+      const sx = p.sx + cam.x;
+      const sy = p.sy + cam.y;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ====== 资源采集逻辑（每10帧执行一次） ======
+let gatherFrame = 0;
+function gatherTick() {
+  gatherFrame++;
+  if (gatherFrame % 10 !== 0) return;
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const cell = map[r][c];
+      if (!cell.object || !cell.object.gatherRange) continue;
+      const obj = cell.object;
+      scanLoop:
+      for (let dr = -obj.gatherRange; dr <= obj.gatherRange; dr++) {
+        for (let dc = -obj.gatherRange; dc <= obj.gatherRange; dc++) {
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= MAP_N || nc < 0 || nc >= MAP_N) continue;
+          if (Math.abs(dr) + Math.abs(dc) > obj.gatherRange) continue;
+          const target = map[nr][nc];
+          if (target.resource && target.resource.type === obj.resourceType && target.resource.amount > 0) {
+            const rate = obj.gatherRate * (speed100x ? 100 : 1);
+            obj.gatherProgress += rate;
+            if (obj.gatherProgress >= 1) {
+              obj.gatherProgress -= 1;
+              obj.resourcesCollected++;
+              resources[obj.resourceType] = (resources[obj.resourceType] || 0) + 1;
+              target.resource.amount--;
+              if (target.resource.amount <= 0) {
+                target.resource = null;
+                if (target.terrain.name === '森林') target.terrain = terrainTypes[0];
+                if (target.terrain.name === '金矿') { target.object = null; target.terrain = terrainTypes[0]; }
+              }
+            }
+            break scanLoop;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ====== 绘制建筑预览虚影 ======
+function drawGhost() {
+  if (!placementMode || !ghostTile) return;
+  const tile = map[ghostTile.r][ghostTile.c];
+  const tw = TILE_W / 2, th = TILE_H / 2, h = tile.height;
+  const sx = (ghostTile.c - ghostTile.r) * tw + cam.x;
+  const sy = (ghostTile.c + ghostTile.r) * th - h + cam.y;
+  const top = { x: sx, y: sy - th };
+  const bot = { x: sx, y: sy + th };
+  const left = { x: sx - tw, y: sy };
+  const right = { x: sx + tw, y: sy };
+
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+
+  if (ghostValid) {
+    ctx.fillStyle = 'rgba(100,255,100,0.25)';
+    ctx.strokeStyle = 'rgba(100,255,100,0.7)';
+  } else {
+    ctx.fillStyle = 'rgba(255,80,80,0.25)';
+    ctx.strokeStyle = 'rgba(255,80,80,0.7)';
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(top.x, top.y);
+  ctx.lineTo(right.x, right.y);
+  ctx.lineTo(bot.x, bot.y);
+  ctx.lineTo(left.x, left.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const objY = sy - th;
+  drawObject(sx, objY, { type: placementMode.type, name: placementMode.name });
+
+  ctx.restore();
+}
+
+// ====== 主渲染 ======
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  // 背景
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0, '#1a1a2e');
+  skyGrad.addColorStop(0.6, '#2d1b3d');
+  skyGrad.addColorStop(1, '#3d2b1a');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  gatherTick();
+
+  buildingLabels = [];
+
+  ctx.save();
+
+  // 缩放
+  const zoom = cam.zoom;
+  ctx.translate(W/2, H/2);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-W/2, -H/2);
+
+  // 调整相机偏移使地图居中
+  ctx.translate(mapCenterX, mapCenterY);
+
+  // ====== 地下基座（防止地图边缘悬空） ======
+  const baseDepth = 0;
+  const lastIdx = MAP_N - 1;
+  const tw2 = TILE_W / 2, th2 = TILE_H / 2;
+  const p00x = 0, p00y = 0;
+  const p0nx = lastIdx * tw2, p0ny = lastIdx * th2;
+  const pn0x = -lastIdx * tw2, pn0y = lastIdx * th2;
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1;
+
+  // 北侧墙壁（r=0 边，亮面风格）
+  ctx.fillStyle = '#5a4a3a';
+  ctx.beginPath();
+  ctx.moveTo(p00x, p00y);
+  ctx.lineTo(p0nx, p0ny);
+  ctx.lineTo(p0nx, p0ny + baseDepth);
+  ctx.lineTo(p00x, p00y + baseDepth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 西侧墙壁（c=0 边，暗面风格）
+  ctx.fillStyle = '#3a2a1a';
+  ctx.beginPath();
+  ctx.moveTo(p00x, p00y);
+  ctx.lineTo(pn0x, pn0y);
+  ctx.lineTo(pn0x, pn0y + baseDepth);
+  ctx.lineTo(p00x, p00y + baseDepth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 视锥裁剪 + 排序（只绘制可见地块）
+  const vpL = -W/2/cam.zoom + W/2 - mapCenterX;
+  const vpR =  W/2/cam.zoom + W/2 - mapCenterX;
+  const vpT = -H/2/cam.zoom + H/2 - mapCenterY;
+  const vpB =  H/2/cam.zoom + H/2 - mapCenterY;
+
+  const tiles = [];
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const cx = (c - r) * tw2 + cam.x;
+      const cy = (c + r) * th2 + cam.y;
+      const hw = tw2 + 1, hh = th2 + TILE_H_MAX + 1;
+      if (cx + hw < vpL || cx - hw > vpR || cy + hh < vpT || cy - hh > vpB)
+        continue;
+      tiles.push({ r, c, cell: map[r][c] });
+    }
+  }
+  tiles.sort((a, b) => (a.r + a.c + a.cell.height * 0.01) - (b.r + b.c + b.cell.height * 0.01));
+
+  for (const t of tiles) {
+    drawTile(t.r, t.c, t.cell);
+    // 采集范围高亮（融入排序循环，保持深度正确）
+    if (selectedTile) {
+      const sc = map[selectedTile.r][selectedTile.c];
+      if (sc.object && sc.object.gatherRange) {
+        const dr = t.r - selectedTile.r, dc = t.c - selectedTile.c;
+        const range = sc.object.gatherRange;
+        if (Math.abs(dr) + Math.abs(dc) <= range) {
+          const tw2r = TILE_W / 2, th2r = TILE_H / 2;
+          const sx = (t.c - t.r) * tw2r + cam.x;
+          const sy = (t.c + t.r) * th2r - t.cell.height + cam.y;
+          const top = { x: sx, y: sy - th2r };
+          const bot = { x: sx, y: sy + th2r };
+          const left = { x: sx - tw2r, y: sy };
+          const right = { x: sx + tw2r, y: sy };
+          const hasRes = t.cell.resource && t.cell.resource.type === sc.object.resourceType && t.cell.resource.amount > 0;
+          ctx.fillStyle = hasRes ? 'rgba(100,255,100,0.2)' : 'rgba(200,200,200,0.12)';
+          ctx.strokeStyle = hasRes ? 'rgba(100,255,100,0.35)' : 'rgba(200,200,200,0.2)';
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(top.x, top.y);
+          ctx.lineTo(right.x, right.y);
+          ctx.lineTo(bot.x, bot.y);
+          ctx.lineTo(left.x, left.y);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  drawGhost();
+
+  for (const lbl of buildingLabels) {
+    ctx.fillStyle = '#f0d9a0';
+    ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(lbl.name, lbl.x, lbl.y);
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.restore();
+
+  // UI 信息
+  if (selectedTile) {
+    const cell = map[selectedTile.r][selectedTile.c];
+    const objName = cell.object ? ` · ${cell.object.name}` : '';
+    const resName = cell.resource ? ` · ${cell.resource.type === 'wood' ? '木头' : cell.resource.type === 'gold' ? '黄金' : '食物'}` : '';
+    const resPct = cell.resource && cell.resource.maxAmount > 0 ? cell.resource.amount / cell.resource.maxAmount : 0;
+
+    let panelH = cell.object && cell.object.gatherProgress !== undefined ? 90 : 44;
+    let sx = 160, sy = H - 56;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.roundRect(sx - 10, sy - 14, 360, panelH, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#f0d9a0';
+    ctx.font = '14px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    let line1 = `📍 [${selectedTile.r},${selectedTile.c}] ${cell.terrain.name} 高度:${cell.height}${objName}${resName}`;
+    ctx.fillText(line1, sx, sy + 6);
+
+    // 资源条
+    if (cell.resource) {
+      const barX = sx, barY = sy + 24, barW = 160, barH = 8;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.roundRect(barX, barY, barW, barH, 4);
+      ctx.fill();
+      const colors = { wood: '#6abf5a', gold: '#f0d060', food: '#ff6666' };
+      ctx.fillStyle = colors[cell.resource.type] || '#fff';
+      ctx.roundRect(barX, barY, barW * resPct, barH, 4);
+      ctx.fill();
+      ctx.fillStyle = '#e0d0b0';
+      ctx.font = '10px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(`${cell.resource.amount}/${cell.resource.maxAmount}`, barX + barW + 6, barY + barH / 2);
+    }
+
+    // 采集进度条
+    if (cell.object && cell.object.gatherProgress !== undefined) {
+      const bx = sx, by = cell.resource ? sy + 40 : sy + 26;
+      ctx.fillStyle = '#f0d9a0';
+      ctx.font = '11px "Segoe UI", Arial, sans-serif';
+      const resLabel = cell.object.resourceType === 'wood' ? '🪵' : cell.object.resourceType === 'gold' ? '⛏️' : '🌾';
+      ctx.fillText(`${resLabel} 采集进度 · 已收获:${cell.object.resourcesCollected || 0}`, bx, by + 4);
+      const pBarW = 200, pBarH = 6;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.roundRect(bx, by + 12, pBarW, pBarH, 3);
+      ctx.fill();
+      ctx.fillStyle = '#4ae04a';
+      ctx.roundRect(bx, by + 12, pBarW * Math.min(1, cell.object.gatherProgress || 0), pBarH, 3);
+      ctx.fill();
+    }
+  }
+
+  // 资源面板（右下角）
+  const rpx = W - 170, rpy = H - 110;
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.roundRect(rpx - 10, rpy - 10, 170, 108, 8);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(240,217,160,0.2)';
+  ctx.lineWidth = 1;
+  ctx.roundRect(rpx - 10, rpy - 10, 170, 108, 8);
+  ctx.stroke();
+
+  ctx.font = '11px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  const resIcons = [
+    { key: 'wood', icon: '🪵', color: '#6abf5a' },
+    { key: 'gold', icon: '⛏️', color: '#f0d060' },
+    { key: 'food', icon: '🌾', color: '#ff8888' },
+  ];
+  resIcons.forEach((ri, i) => {
+    const y = rpy + i * 30;
+    ctx.fillStyle = '#f0d9a0';
+    ctx.fillText(ri.icon, rpx, y + 2);
+    ctx.fillStyle = ri.color;
+    ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    const amt = resources[ri.key] || 0;
+    ctx.fillText(String(amt), rpx + 24, y + 2);
+    ctx.fillStyle = 'rgba(240,217,160,0.3)';
+    ctx.font = '10px "Segoe UI", Arial, sans-serif';
+    ctx.fillText(ri.key === 'wood' ? '木头' : ri.key === 'gold' ? '黄金' : '食物', rpx + 100, y + 2);
+  });
+
+  requestAnimationFrame(render);
+}
+
+// roundRect polyfill for canvas
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    return this;
+  };
+}
+
+// ====== 鼠标事件 ======
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  camStartX = cam.x;
+  camStartY = cam.y;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (placementMode) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left);
+    const my = (e.clientY - rect.top);
+    const hit = getTileFromScreen(mx, my);
+    if (hit) {
+      ghostTile = hit;
+      const cell = map[hit.r][hit.c];
+      ghostValid = cell.terrain.name !== '水' && !cell.object;
+    } else {
+      ghostTile = null;
+      ghostValid = false;
+    }
+  }
+  if (!isDragging) return;
+  cam.x = camStartX + (e.clientX - dragStartX) / cam.zoom;
+  cam.y = camStartY + (e.clientY - dragStartY) / cam.zoom;
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+
+  // 如果基本没移动，视为点击
+  const dx = Math.abs(e.clientX - dragStartX);
+  const dy = Math.abs(e.clientY - dragStartY);
+  if (dx < 5 && dy < 5) {
+    if (placementMode && e.button === 0) {
+      if (ghostValid && ghostTile) {
+        placeBuilding(ghostTile.r, ghostTile.c, placementMode);
+        cancelPlacement();
+      }
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left);
+    const my = (e.clientY - rect.top);
+    const hit = getTileFromScreen(mx, my);
+    selectedTile = hit;
+  }
+});
+
+// 右键取消建造
+canvas.addEventListener('contextmenu', (e) => {
+  if (placementMode) {
+    e.preventDefault();
+    cancelPlacement();
+  }
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  cam.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, cam.zoom * delta));
+}, { passive: false });
+
+// 触摸
+let touchStartDist = 0;
+let lastTouchZoom = 1;
+
+canvas.addEventListener('touchstart', (e) => {
+  if (placementMode) return;
+  if (e.touches.length === 1) {
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    camStartX = cam.x;
+    camStartY = cam.y;
+  } else if (e.touches.length === 2) {
+    const t = e.touches;
+    touchStartDist = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    lastTouchZoom = cam.zoom;
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1 && isDragging) {
+    cam.x = camStartX + (e.touches[0].clientX - dragStartX) / cam.zoom;
+    cam.y = camStartY + (e.touches[0].clientY - dragStartY) / cam.zoom;
+  } else if (e.touches.length === 2) {
+    const t = e.touches;
+    const dist = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const scale = dist / touchStartDist;
+    cam.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, lastTouchZoom * scale));
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchend', () => {
+  isDragging = false;
+}, { passive: true });
+
+// ====== 键盘 ======
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && placementMode) {
+    cancelPlacement();
+    return;
+  }
+  const step = 20 / cam.zoom;
+  switch (e.key) {
+    case 'ArrowUp':    cam.y -= step; break;
+    case 'ArrowDown':  cam.y += step; break;
+    case 'ArrowLeft':  cam.x -= step; break;
+    case 'ArrowRight': cam.x += step; break;
+    case 'r': case 'R': {
+      const nm = generateMap();
+      for (let r = 0; r < MAP_N; r++)
+        for (let c = 0; c < MAP_N; c++) {
+          map[r][c].terrain = nm[r][c].terrain;
+          map[r][c].height = nm[r][c].height;
+          map[r][c].object = nm[r][c].object;
+        }
+      selectedTile = null;
+      break;
+    }
+  }
+});
+
+// ====== 速度开关 ======
+document.getElementById('speedToggle').addEventListener('click', () => {
+  speed100x = !speed100x;
+  const el = document.getElementById('speedToggle');
+  el.textContent = speed100x ? '🐇 100×' : '🐇 1×';
+  el.className = speed100x ? 'speed-on' : 'speed-off';
+});
+
+// ====== 开始 ======
+render();
+</script>
+</body>
+</html>
