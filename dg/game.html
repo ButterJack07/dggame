@@ -137,69 +137,58 @@
   }
   #cheatBtn:hover { background: rgba(50,35,20,0.9); border-color: #d4a830; }
 
+  /* ====== 左上角资源面板 ====== */
+  #resourcePanel {
+    position: fixed;
+    top: 48px;
+    left: 16px;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(25,18,10,0.94), rgba(15,10,5,0.94));
+    border: 2px solid #8a7a5a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    user-select: none;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    color: #f0d9a0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #resourcePanel .rp-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  #resourcePanel .rp-item .rp-icon { font-size: 14px; }
+  #resourcePanel .rp-item .rp-amt { font-size: 12px; font-weight: bold; min-width: 32px; }
+  #resourcePanel .rp-divider {
+    width: 1px; height: 20px; background: rgba(240,217,160,0.15);
+  }
+  #resourcePanel .rp-pop { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #d4c4a0; }
+  #resourcePanel .rp-pop .pop-num { font-weight: bold; color: #f0d9a0; }
+  #resourcePanel .rp-pop .pop-max { color: rgba(240,217,160,0.4); }
+
   /* ====== 底部信息面板 ====== */
   #sideInfoPanel {
     position: fixed;
     bottom: 16px;
     left: 230px;
-    right: 16px;
-    height: 130px;
+    width: 380px;
+    height: 120px;
     z-index: 20;
     background: linear-gradient(180deg, rgba(25,18,10,0.96), rgba(15,10,5,0.96));
     border: 2px solid #8a7a5a;
     border-radius: 8px;
-    padding: 8px;
+    padding: 6px 8px;
     user-select: none;
     box-shadow: 0 4px 30px rgba(0,0,0,0.8);
     color: #f0d9a0;
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 12px;
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    overflow: hidden;
-  }
-  #sideInfoPanel #sipLeft {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 180px;
-    max-width: 200px;
-    border-right: 1px solid rgba(240,217,160,0.1);
-    padding-right: 8px;
-  }
-  #sideInfoPanel #sipRight {
-    flex: 1;
     overflow-y: auto;
-    padding-left: 4px;
   }
-  #sideInfoPanel .res-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 0;
-  }
-  #sideInfoPanel .res-row .res-icon { font-size: 14px; width: 20px; text-align: center; }
-  #sideInfoPanel .res-row .res-bar-wrap {
-    flex: 1; height: 7px; background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden;
-  }
-  #sideInfoPanel .res-row .res-bar {
-    height: 100%; border-radius: 3px; transition: width 0.15s;
-  }
-  #sideInfoPanel .res-row .res-amt {
-    font-size: 11px; font-weight: bold; min-width: 40px; text-align: right;
-  }
-  #sideInfoPanel .sip-pop {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 0;
-    font-size: 11px;
-    color: #d4c4a0;
-  }
-  #sideInfoPanel .sip-pop .pop-icon { font-size: 14px; }
-  #sideInfoPanel .sip-pop .pop-num { font-weight: bold; font-size: 13px; color: #f0d9a0; }
-  #sideInfoPanel .sip-pop .pop-max { color: rgba(240,217,160,0.4); }
   #sideInfoPanel .sip-title {
     font-size: 12px;
     font-weight: bold;
@@ -291,15 +280,17 @@
 <div id="placementHint">点击地块放置建筑 · <span class="key">右键</span>取消</div>
 <div id="speedToggle" class="speed-off">🐇 1×</div>
 <div id="cheatBtn">💰 +100 <span style="font-size:11px;opacity:0.6">G</span></div>
+<div id="resourcePanel">
+  <div class="rp-item"><span class="rp-icon">🪵</span><span class="rp-amt" id="resWood" style="color:#6abf5a">0</span></div>
+  <div class="rp-divider"></div>
+  <div class="rp-item"><span class="rp-icon">⛏️</span><span class="rp-amt" id="resGold" style="color:#f0d060">0</span></div>
+  <div class="rp-divider"></div>
+  <div class="rp-item"><span class="rp-icon">🌾</span><span class="rp-amt" id="resFood" style="color:#ff6666">0</span></div>
+  <div class="rp-divider"></div>
+  <div class="rp-pop">👥 <span class="pop-num" id="popCount">0</span><span class="pop-max"> / <span id="popMax">0</span></span></div>
+</div>
 <div id="sideInfoPanel">
-  <div id="sipLeft">
-    <div class="sip-title" style="font-size:10px;color:rgba(240,217,160,0.5);letter-spacing:1px">📦 资源</div>
-    <div id="resDisplay"></div>
-    <div class="sip-pop"><span class="pop-icon">👥</span> <span class="pop-num" id="popCount">0</span><span class="pop-max"> / <span id="popMax">0</span></span></div>
-  </div>
-  <div id="sipRight">
-    <div id="selectionContent"><div class="sip-hint">点击单位或建筑查看详情</div></div>
-  </div>
+  <div id="selectionContent"><div class="sip-hint">点击单位或建筑查看详情</div></div>
 </div>
 <script>
 const canvas = document.getElementById('game');
@@ -516,22 +507,11 @@ function processTrainingQueues() {
 }
 
 function updateResources() {
-  const el = document.getElementById('resDisplay');
-  if (!el) return;
-  const resData = [
-    { key: 'wood', icon: '🪵', color: '#6abf5a', label: '木头' },
-    { key: 'gold', icon: '⛏️', color: '#f0d060', label: '黄金' },
-    { key: 'food', icon: '🌾', color: '#ff6666', label: '食物' },
-  ];
-  el.innerHTML = resData.map(r => {
-    const amt = resources[r.key] || 0;
-    const pct = Math.min(100, amt / 5);
-    return `<div class="res-row">
-      <span class="res-icon">${r.icon}</span>
-      <div class="res-bar-wrap"><div class="res-bar" style="width:${pct}%;background:${r.color}"></div></div>
-      <span class="res-amt" style="color:${r.color}">${amt}</span>
-    </div>`;
-  }).join('');
+  const ids = { wood: 'resWood', gold: 'resGold', food: 'resFood' };
+  for (const [k, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = resources[k] || 0;
+  }
 }
 
 function updatePopulation() {
@@ -540,9 +520,6 @@ function updatePopulation() {
 }
 
 function updateSidePanel() {
-  updateResources();
-  updatePopulation();
-
   const el = document.getElementById('selectionContent');
   if (!el) return;
   const cell = selectedTile && map[selectedTile.r] && map[selectedTile.r][selectedTile.c];
@@ -3078,7 +3055,7 @@ window.addEventListener('mousemove', (e) => {
   const my = (e.clientY - rect.top);
   lastMouseX = mx; lastMouseY = my;
   const _uiEl = document.elementFromPoint(e.clientX, e.clientY);
-  isOverUI = _uiEl && _uiEl.closest && _uiEl.closest('#buildingPanel, #sideInfoPanel, #speedToggle, #cheatBtn') !== null;
+  isOverUI = _uiEl && _uiEl.closest && _uiEl.closest('#buildingPanel, #sideInfoPanel, #resourcePanel, #speedToggle, #cheatBtn') !== null;
 
   if (placementMode) {
     const hit = getTileFromScreen(mx, my);
