@@ -3170,6 +3170,7 @@ canvas.addEventListener('contextmenu', (e) => {
     const tileC = Math.min(MAP_N-1, Math.max(0, Math.round(tgt.c)));
     const path = findPath(unit.r, unit.c, tileR, tileC);
     if (path.length > 0) { unit.path = path; unit.pathIndex = 0; unit.state = 'move'; }
+    else if (pendingState) { unit.state = pendingState; }
   }
 
   // 右键攻击敌方单位
