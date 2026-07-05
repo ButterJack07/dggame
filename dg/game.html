@@ -287,6 +287,83 @@
     border: 1px solid rgba(240,217,160,0.2);
     font-size: 11px;
   }
+
+  /* ====== 驻扎面板 ====== */
+  #garrisonPanel {
+    position: fixed;
+    bottom: 16px;
+    left: calc(275px + 190px + 8px);
+    width: 76px;
+    height: auto;
+    min-height: 60px;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(25,18,10,0.96), rgba(15,10,5,0.96));
+    border: 2px solid #8a7a5a;
+    border-radius: 8px;
+    padding: 4px 4px;
+    user-select: none;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.8);
+    color: #f0d9a0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+  }
+  #garrisonPanel .gp-title {
+    font-size: 10px;
+    text-align: center;
+    padding-bottom: 3px;
+    border-bottom: 1px solid rgba(240,217,160,0.1);
+    margin-bottom: 3px;
+  }
+  #garrisonContent {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-content: flex-start;
+    overflow-y: auto;
+    justify-content: center;
+  }
+  #garrisonContent .g-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+    text-align: center;
+    line-height: 20px;
+    background: rgba(240,217,160,0.08);
+    border: 1px solid rgba(240,217,160,0.1);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.1s;
+    flex: 0 0 20px;
+  }
+  #garrisonContent .g-icon:hover {
+    background: rgba(240,217,160,0.2);
+    border-color: rgba(240,217,160,0.35);
+  }
+  #garrisonContent .g-icon.g-empty {
+    background: rgba(240,217,160,0.03);
+    border-color: rgba(240,217,160,0.05);
+    cursor: default;
+  }
+  #garrisonReleaseBtn {
+    margin-top: 3px;
+    padding: 2px 0;
+    font-size: 10px;
+    text-align: center;
+    background: rgba(200,80,80,0.2);
+    border: 1px solid rgba(200,80,80,0.3);
+    border-radius: 3px;
+    color: #f0a0a0;
+    cursor: pointer;
+    transition: all 0.1s;
+    user-select: none;
+  }
+  #garrisonReleaseBtn:hover {
+    background: rgba(200,80,80,0.35);
+    border-color: rgba(200,80,80,0.5);
+  }
 </style>
 </head>
 <body>
@@ -312,6 +389,11 @@
 </div>
 <div id="sideInfoPanel">
   <div id="selectionContent"><div class="sip-hint">点击单位或建筑查看详情</div></div>
+</div>
+<div id="garrisonPanel">
+  <div class="gp-title">🏰 驻扎 <span id="garrisonCount" style="color:#f0d9a0">0</span></div>
+  <div id="garrisonContent"></div>
+  <div id="garrisonReleaseBtn">▼ 全部释放</div>
 </div>
 <script>
 const canvas = document.getElementById('game');
@@ -356,6 +438,11 @@ let selectedTile = null;
 let buildingLabels = [];
 const resources = { wood: 200, gold: 150, food: 200 };
 let speed100x = false;
+let gameOver = false;
+let gameOverMessage = '';
+let enemyResources = { wood: 200, gold: 150, food: 200 };
+let upgradeAtk = 0;
+let upgradeDef = 0;
 
 // ====== 建造模式状态 ======
 let placementMode = null;
@@ -465,6 +552,7 @@ const UNIT_TYPES = {
   cavalry_archer: { name: '骑射手', hp: 50, speed: 0.80, attack: 7, attackRange: 3.5, armor: 0, cost: { wood: 80, gold: 40 } },
   siege_ram:    { name: '攻城锤', hp: 130, speed: 0.35, attack: 25, attackRange: 1, armor: 4, cost: { wood: 150, gold: 80 } },
   monk:         { name: '僧侣', hp: 20, speed: 0.50, attack: 0, attackRange: 0, armor: 0, cost: { gold: 100 } },
+  king:         { name: '国王', hp: 100, speed: 0.40, attack: 8, attackRange: 1, armor: 1, cost: null },
 };
 
 // ====== 建筑功能配置 ======
@@ -515,11 +603,19 @@ const buildingActions = {
   },
   'blacksmith': {
     name: '铁匠铺', icon: '🔨',
-    actions: [],
+    actions: [
+      { type: 'upgrade', id: 'atk_upgrade', name: '锻造攻击+1', icon: '⚔', cost: { wood: 100, gold: 50 }, time: 1 },
+      { type: 'upgrade', id: 'def_upgrade', name: '锻造护甲+1', icon: '🛡', cost: { wood: 100, gold: 50 }, time: 1 },
+    ],
   },
   'market': {
     name: '市场', icon: '🏪',
-    actions: [],
+    actions: [
+      { type: 'trade', id: 'wood2gold', name: '木材→黄金', icon: '🔄', cost: { wood: 50 }, time: 1, output: { gold: 30 } },
+      { type: 'trade', id: 'food2gold', name: '食物→黄金', icon: '🔄', cost: { food: 50 }, time: 1, output: { gold: 30 } },
+      { type: 'trade', id: 'gold2wood', name: '黄金→木材', icon: '🔄', cost: { gold: 30 }, time: 1, output: { wood: 50 } },
+      { type: 'trade', id: 'gold2food', name: '黄金→食物', icon: '🔄', cost: { gold: 30 }, time: 1, output: { food: 50 } },
+    ],
   },
   'house': {
     name: '房屋', icon: '🏠',
@@ -541,15 +637,17 @@ const buildingActions = {
 
 const resourceLabels = { wood: '🪵', gold: '⛏️', food: '🌾' };
 
-function hasEnoughRes(cost) {
+function hasEnoughRes(cost, res) {
   if (!cost) return true;
-  for (const k in cost) { if ((resources[k] || 0) < cost[k]) return false; }
+  const r = res || resources;
+  for (const k in cost) { if ((r[k] || 0) < cost[k]) return false; }
   return true;
 }
 
-function deductRes(cost) {
+function deductRes(cost, res) {
   if (!cost) return;
-  for (const k in cost) { resources[k] = (resources[k] || 0) - cost[k]; }
+  const r = res || resources;
+  for (const k in cost) { r[k] = (r[k] || 0) - cost[k]; }
 }
 
 function spawnUnitNear(buildingR, buildingC, unitType, team) {
@@ -567,18 +665,18 @@ function spawnUnitNear(buildingR, buildingC, unitType, team) {
   return null;
 }
 
-function getPopCount() {
+function getPopCount(team) {
   let n = 0;
-  for (const u of units) if (u.hp > 0) n++;
+  for (const u of units) if (u.hp > 0 && (team === undefined || u.team === team)) n++;
   return n;
 }
 
-function getPopMax() {
+function getPopMax(team) {
   let n = 5;
   for (let r = 0; r < MAP_N; r++)
     for (let c = 0; c < MAP_N; c++) {
       const obj = map[r][c].object;
-      if (obj && obj.type === 'house') n += 5;
+      if (obj && obj.type === 'house' && (team === undefined || obj.team === team)) n += 5;
     }
   return n;
 }
@@ -593,16 +691,20 @@ function setHint(msg) {
   }, 2000);
 }
 
-function startTraining(r, c, action) {
+function startTraining(r, c, action, team) {
   const cell = map[r][c];
   if (!cell.object) return;
-  if (!hasEnoughRes(action.cost)) { setHint('资源不足！'); return; }
-  if (getPopCount() >= getPopMax()) { setHint('人口已满！'); return; }
+  const t = team !== undefined ? team : TEAM.PLAYER;
+  const res = t === TEAM.ENEMY ? enemyResources : resources;
+  if (!hasEnoughRes(action.cost, res)) { if (t === TEAM.PLAYER) setHint('资源不足！'); return; }
+  if (getPopCount(t) >= getPopMax(t)) { if (t === TEAM.PLAYER) setHint('人口已满！'); return; }
   const queue = cell.object.trainingQueue || (cell.object.trainingQueue = []);
-  deductRes(action.cost);
-  queue.push({ actionId: action.id, type: action.type, unitType: action.id, name: action.name, icon: action.icon, progress: 0, totalTime: action.time });
-  setHint(`⏳ ${action.name} 训练中...`);
-  updateSidePanel();
+  deductRes(action.cost, res);
+  queue.push({ actionId: action.id, type: action.type, unitType: action.id, name: action.name, icon: action.icon, progress: 0, totalTime: action.time, team: t });
+  if (t === TEAM.PLAYER) {
+    setHint(`⏳ ${action.name} 训练中...`);
+    updateSidePanel();
+  }
 }
 
 function processTrainingQueues() {
@@ -616,7 +718,8 @@ function processTrainingQueues() {
       if (item.progress >= item.totalTime) {
         let success = true;
         if (item.type === 'train') {
-          const spawned = spawnUnitNear(r, c, item.unitType);
+          const unitTeam = item.team !== undefined ? item.team : TEAM.PLAYER;
+          const spawned = spawnUnitNear(r, c, item.unitType, unitTeam);
           if (!spawned) success = false;
         }
         if (success) {
@@ -642,8 +745,8 @@ function updateResources() {
 }
 
 function updatePopulation() {
-  document.getElementById('popCount').textContent = getPopCount();
-  document.getElementById('popMax').textContent = getPopMax();
+  document.getElementById('popCount').textContent = getPopCount(TEAM.PLAYER);
+  document.getElementById('popMax').textContent = getPopMax(TEAM.PLAYER);
 }
 
 function updateSidePanel() {
@@ -656,7 +759,7 @@ function updateSidePanel() {
   if (selectedUnits.length > 0 && !selectedBuilding) {
     const unit = selectedUnits[0];
     const typeDef = UNIT_TYPES[unit.type];
-    const iconMap = { villager: '👷', spearman: '🔱', swordsman: '⚔', archer: '🏹', cavalry: '🐴', scout: '🔭', heavy_infantry: '🛡', cavalry_archer: '🏇', siege_ram: '🏋', monk: '🙏' };
+    const iconMap = { villager: '👷', spearman: '🔱', swordsman: '⚔', archer: '🏹', cavalry: '🐴', scout: '🔭', heavy_infantry: '🛡', cavalry_archer: '🏇', siege_ram: '🏋', monk: '🙏', king: '👑' };
     const stateLabel = { idle: '待命', move: '移动中', gather: '采集中', attack: '战斗中', deposit: '返回中', building: '建造中' }[unit.state] || (unit.farming ? '耕作中' : unit.state);
     const hpPct = Math.max(0, Math.min(100, (unit.hp / unit.maxHp) * 100));
     const hpColor = hpPct > 50 ? '#4ae04a' : hpPct > 25 ? '#e0e040' : '#e04040';
@@ -691,6 +794,11 @@ function updateSidePanel() {
     const bhpPct = Math.max(0, Math.min(100, (obj.hp / obj.maxHp) * 100));
     const bhpColor = bhpPct > 50 ? '#4ae04a' : bhpPct > 25 ? '#e0e040' : '#e04040';
     html += `<div class="sip-hp-bar-wrap sip-full"><div class="sip-hp-bar" style="width:${bhpPct}%;background:${bhpColor}"></div></div>`;
+    if (canGarrison(obj.type)) {
+      const gCount = (obj.garrison || []).length;
+      const gMax = getGarrisonMax(obj.type);
+      html += `<div class="sip-cell sip-full"><span class="sip-label">驻扎</span><span class="val">${gCount}/${gMax}</span></div>`;
+    }
     if (!ba || ba.actions.length === 0) {
       html += `<div class="sip-hint sip-full" style="text-align:left;padding:2px 0">该建筑无可用功能</div>`;
     } else {
@@ -714,6 +822,7 @@ function updateSidePanel() {
       }
     }
     el.innerHTML = html;
+    updateGarrisonPanel();
     return;
   }
 
@@ -795,6 +904,13 @@ let boxStartX = 0, boxStartY = 0;
 let lastMouseX = 0, lastMouseY = 0;
 let isOverUI = false;
 
+// 敌方 AI 状态
+let enemyCampPos = null;
+let playerTCPos = null;
+let enemyPatrolTimer = 0;
+let enemyTrainTimer = 0;
+let enemyBuildTimer = 0;
+let enemyWaveTimer = 0;
 function createUnit(type, r, c, team) {
   const def = UNIT_TYPES[type];
   if (!def) return null;
@@ -815,7 +931,130 @@ function createUnit(type, r, c, team) {
   return unit;
 }
 
+// ====== 驻扎系统 ======
+const GARRISON_CAPACITY = {
+  'town-center': 9,
+  'tower': 3,
+};
+const DEFAULT_GARRISON = 3;
+const UNIT_ICON_MAP = { villager: '👷', spearman: '🔱', swordsman: '⚔', archer: '🏹', cavalry: '🐴', scout: '🔭', heavy_infantry: '🛡', cavalry_archer: '🏇', siege_ram: '🏋', monk: '🙏', king: '👑' };
+
+function getGarrisonMax(buildingType) {
+  return GARRISON_CAPACITY[buildingType] || (buildingType === 'town-center' ? 10 : 0);
+}
+
+function canGarrison(buildingType) {
+  return getGarrisonMax(buildingType) > 0;
+}
+
+function garrisonUnit(unit, bR, bC) {
+  const bCell = map[bR] && map[bR][bC];
+  if (!bCell || !bCell.object) return false;
+  const bt = bCell.object.type;
+  if (!canGarrison(bt)) return false;
+  const garrison = bCell.object.garrison || (bCell.object.garrison = []);
+  const maxCapacity = getGarrisonMax(bt);
+  if (garrison.length >= maxCapacity) return false;
+  bCell.object._lastGarrisonTime = performance ? performance.now() : Date.now();
+  garrison.push({ type: unit.type, team: unit.team });
+  removeUnit(unit);
+  updateGarrisonPanel();
+  return true;
+}
+
+function ungarrisonUnit(r, c, idx) {
+  const bCell = map[r] && map[r][c];
+  if (!bCell || !bCell.object) return;
+  const garrison = bCell.object.garrison || [];
+  if (idx < 0 || idx >= garrison.length) return;
+  const info = garrison.splice(idx, 1)[0];
+  const spawned = spawnUnitNear(r, c, info.type, info.team);
+  if (!spawned) garrison.splice(idx, 0, info);
+  updateGarrisonPanel();
+}
+
+function findGarrisonBuilding(unit, team) {
+  let best = null, bestDist = Infinity;
+  const ur = Math.round(unit.r), uc = Math.round(unit.c);
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const obj = map[r][c].object;
+      if (!obj) continue;
+      if (obj.team !== team) continue;
+      if (!canGarrison(obj.type)) continue;
+      const garrison = obj.garrison || [];
+      if (garrison.length >= getGarrisonMax(obj.type)) continue;
+      const d = Math.abs(r - ur) + Math.abs(c - uc);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { r, c, obj };
+      }
+    }
+  }
+  return best;
+}
+
+function updateGarrisonPanel() {
+  const content = document.getElementById('garrisonContent');
+  const countEl = document.getElementById('garrisonCount');
+  let garrisonArr = [];
+  let bR = -1, bC = -1;
+  let maxCap = 9;
+  const cell = selectedTile && map[selectedTile.r] && map[selectedTile.r][selectedTile.c];
+  if (cell && cell.object && canGarrison(cell.object.type)) {
+    if (!cell.object.garrison) cell.object.garrison = [];
+    garrisonArr = cell.object.garrison;
+    bR = selectedTile.r; bC = selectedTile.c;
+    maxCap = getGarrisonMax(cell.object.type);
+  }
+  if (countEl) {
+    if (bR >= 0) countEl.textContent = `${garrisonArr.length}/${maxCap}`;
+    else countEl.textContent = '0';
+  }
+  if (!content) return;
+  if (bR < 0) {
+    content.innerHTML = '<div style="color:rgba(240,217,160,0.2);font-size:10px;text-align:center;padding:8px 0">选择建筑</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < maxCap; i++) {
+    const g = garrisonArr[i];
+    if (g) {
+      const icon = UNIT_ICON_MAP[g.type] || '👤';
+      html += `<div class="g-icon" data-br="${bR}" data-bc="${bC}" data-gidx="${i}">${icon}</div>`;
+    } else {
+      html += `<div class="g-icon g-empty"></div>`;
+    }
+  }
+  content.innerHTML = html;
+}
+
+// 驻扎面板点击事件（卸出单位）
+document.getElementById('garrisonContent').addEventListener('click', (e) => {
+  const icon = e.target.closest('.g-icon');
+  if (!icon) return;
+  const r = parseInt(icon.dataset.br);
+  const c = parseInt(icon.dataset.bc);
+  const idx = parseInt(icon.dataset.gidx);
+  ungarrisonUnit(r, c, idx);
+});
+
+// 全部释放按钮
+document.getElementById('garrisonReleaseBtn').addEventListener('click', () => {
+  const cell = selectedTile && map[selectedTile.r] && map[selectedTile.r][selectedTile.c];
+  if (!cell || !cell.object || !cell.object.garrison) return;
+  const garrison = [...cell.object.garrison];
+  for (let i = garrison.length - 1; i >= 0; i--) {
+    if (garrison[i].type === 'king') continue;
+    ungarrisonUnit(selectedTile.r, selectedTile.c, i);
+  }
+});
+
 function removeUnit(unit) {
+  if (unit.type === 'king') {
+    gameOver = true;
+    gameOverMessage = unit.team === TEAM.PLAYER ? '💀 游戏结束！国王阵亡！' : '👑 胜利！敌方国王已被消灭！';
+  }
   const idx = units.indexOf(unit);
   if (idx !== -1) units.splice(idx, 1);
   const selIdx = selectedUnits.indexOf(unit);
@@ -877,19 +1116,36 @@ function spawnUnitAtCam(type) {
   return null;
 }
 
-function spawnInitialUnits() {
-  // Place a few villagers near map center
-  const center = Math.floor(MAP_N / 2);
-  for (let i = 0; i < 3; i++) {
-    let pr, pc, found = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      pr = center + Math.floor(Math.random() * 5 - 2);
-      pc = center + Math.floor(Math.random() * 5 - 2);
-      if (pr >= 0 && pr < MAP_N && pc >= 0 && pc < MAP_N && map[pr][pc].terrain.name !== '水' && !map[pr][pc].object) {
-        found = true; break;
+function findBuildableTile(centerR, centerC, maxDist) {
+  for (let dr = 0; dr <= maxDist; dr++) {
+    for (let dc = 0; dc <= maxDist; dc++) {
+      const dirs = [[dr,dc],[-dr,dc],[dr,-dc],[-dr,-dc]];
+      for (const [rr, cc] of dirs) {
+        const nr = centerR + rr, nc = centerC + cc;
+        if (nr >= 0 && nr < MAP_N && nc >= 0 && nc < MAP_N &&
+            map[nr][nc].terrain.name !== '水' && !map[nr][nc].object && !map[nr][nc].resource) {
+          return { r: nr, c: nc };
+        }
       }
     }
-    if (found) createUnit('villager', pr, pc);
+  }
+  return null;
+}
+
+function spawnInitialUnits() {
+  const center = Math.floor(MAP_N / 2);
+  const tcPos = findBuildableTile(center, center, 3);
+  if (tcPos) {
+    playerTCPos = { r: tcPos.r, c: tcPos.c };
+    const bhp = BUILDING_HP['town-center'] || 500;
+    const tcObj = { type: 'town-center', name: '城镇中心', hp: bhp, maxHp: bhp, team: TEAM.PLAYER, garrison: [] };
+    map[tcPos.r][tcPos.c].object = tcObj;
+    // 国王初始驻扎在TC
+    tcObj.garrison.push({ type: 'king', team: TEAM.PLAYER });
+  }
+  for (let i = 0; i < 3; i++) {
+    const pos = findBuildableTile(center, center, 5);
+    if (pos) createUnit('villager', pos.r, pos.c);
   }
 }
 
@@ -898,20 +1154,23 @@ function spawnEnemyCamp() {
   let campR, campC, found = false;
   for (let attempt = 0; attempt < 50; attempt++) {
     const angle = Math.random() * Math.PI * 2;
-    const dist = 15 + Math.random() * 10;
+    const dist = 15 + Math.random() * 8;
     campR = Math.round(center + Math.sin(angle) * dist);
     campC = Math.round(center + Math.cos(angle) * dist);
-    if (campR >= 1 && campR < MAP_N - 1 && campC >= 1 && campC < MAP_N - 1 &&
+    if (campR >= 2 && campR < MAP_N - 2 && campC >= 2 && campC < MAP_N - 2 &&
         map[campR][campC].terrain.name !== '水' && !map[campR][campC].object && !map[campR][campC].resource) {
       found = true; break;
     }
   }
   if (!found) return;
-  const bhp = BUILDING_HP['enemy-camp'] || 600;
-  map[campR][campC].object = { type: 'enemy-camp', name: '敌军营寨', hp: bhp, maxHp: bhp, team: TEAM.ENEMY };
-  const enemyTypes = ['spearman', 'archer', 'swordsman', 'spearman', 'archer'];
-  for (const et of enemyTypes) {
-    spawnUnitNear(campR, campC, et, TEAM.ENEMY);
+  enemyCampPos = { r: campR, c: campC };
+  const tcHp = BUILDING_HP['town-center'] || 500;
+  const tcObj = { type: 'town-center', name: '敌方城镇中心', hp: tcHp, maxHp: tcHp, team: TEAM.ENEMY, garrison: [] };
+  map[campR][campC].object = tcObj;
+  tcObj.garrison.push({ type: 'king', team: TEAM.ENEMY });
+  for (let i = 0; i < 3; i++) {
+    const pos = findBuildableTile(campR, campC, 5);
+    if (pos) createUnit('villager', pos.r, pos.c, TEAM.ENEMY);
   }
 }
 
@@ -922,7 +1181,8 @@ function completeConstruction(r, c) {
   const bt = buildingTypes.find(b => b.type === site.buildingType);
   if (!bt) return;
   const bhp = BUILDING_HP[bt.type] || 200;
-  const obj = { type: bt.type, name: bt.name, hp: bhp, maxHp: bhp, team: TEAM.PLAYER };
+  const constructionTeam = site.team !== undefined ? site.team : TEAM.PLAYER;
+  const obj = { type: bt.type, name: bt.name, hp: bhp, maxHp: bhp, team: constructionTeam };
   const bd = buildingData[bt.type];
   if (bd) {
     obj.gatherProgress = 0;
@@ -2707,6 +2967,19 @@ function drawObject(x, y, obj) {
     if (obj.team !== undefined) drawTeamBanner(x, baseY - wallH - 8, obj.team);
     buildingLabels.push({ x, y: y + TILE_H * 0.7, name: obj.name });
   }
+  // 驻扎标记：有单位驻扎时显示小旗
+  if (obj.garrison && obj.garrison.length > 0) {
+    const gx = x, gy = y - TILE_H * 0.1;
+    ctx.fillStyle = '#4a4';
+    ctx.beginPath();
+    ctx.arc(gx, gy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(obj.garrison.length, gx, gy + 0.3);
+  }
 }
 
 // 根据行列生成确定性随机数（避免每帧闪烁）
@@ -2788,15 +3061,15 @@ function canAssignToResource(r, c) {
   return count < 10;
 }
 
-function findDropOff(r, c, resType) {
-  const types = ['town-center', 'lumber-camp', 'mining-camp', 'mill'];
+function findDropOff(r, c, resType, team) {
+  const t = team !== undefined ? team : TEAM.PLAYER;
   let best = null, bestDist = Infinity;
   const sr = Math.round(r), sc = Math.round(c);
   for (let nr = 0; nr < MAP_N; nr++) {
     for (let nc = 0; nc < MAP_N; nc++) {
       const obj = map[nr][nc].object;
       if (!obj) continue;
-      if (obj.team !== undefined && obj.team !== TEAM.PLAYER) continue;
+      if (obj.team !== undefined && obj.team !== t) continue;
       const ok = obj.type === 'town-center' ||
         (resType === 'wood' && obj.type === 'lumber-camp') ||
         (resType === 'gold' && obj.type === 'mining-camp') ||
@@ -2808,6 +3081,99 @@ function findDropOff(r, c, resType) {
     }
   }
   return best;
+}
+
+// ====== 自动驻扎/撤退系统 ======
+const GARRISON_DANGER_RANGE = 6;
+const GARRISON_SAFE_RANGE = 10;
+const GARRISON_UNLEASH_DELAY = 600; // 帧数
+
+function checkAutoGarrison() {
+  for (const unit of units) {
+    if (unit.hp <= 0) continue;
+    if (unit.type !== 'villager') continue;
+    if (unit.team !== TEAM.PLAYER && unit.team !== TEAM.ENEMY) continue;
+    // 已死亡或正在战斗的不处理
+    if (unit.state === 'attack' || unit.state === 'move' && unit._pendingState === 'attack') continue;
+    // 检测附近敌人
+    let danger = false;
+    const sight = GARRISON_DANGER_RANGE;
+    for (const other of units) {
+      if (other.hp <= 0 || other.team === unit.team) continue;
+      if (other.type === 'villager' || other.type === 'king') continue;
+      const d = Math.abs(unit.r - other.r) + Math.abs(unit.c - other.c);
+      if (d < sight) { danger = true; break; }
+    }
+    if (!danger) continue;
+    // 找最近的己方可驻扎建筑
+    const bld = findGarrisonBuilding(unit, unit.team);
+    if (!bld) continue;
+    const bd = Math.abs(Math.round(unit.r) - bld.r) + Math.abs(Math.round(unit.c) - bld.c);
+    if (bd <= 2) {
+      // 已经在建筑旁边，直接进驻
+      garrisonUnit(unit, bld.r, bld.c);
+    } else {
+      // 移动到建筑
+      unit.state = 'idle';
+      unit.attackTarget = null;
+      unit.attackBuildingTarget = null;
+      unit.gatherTarget = null;
+      unit.farming = false;
+      unit.buildingTarget = null;
+      unit.carry = 0;
+      unit.dropTarget = null;
+      unit._fleeTarget = { r: bld.r, c: bld.c };
+      const tgt = offsetTarget(bld.r, bld.c, 0);
+      unit._finalTarget = tgt;
+      const tileR = Math.min(MAP_N - 1, Math.max(0, Math.round(tgt.r)));
+      const tileC = Math.min(MAP_N - 1, Math.max(0, Math.round(tgt.c)));
+      const path = findPath(unit.r, unit.c, tileR, tileC);
+      if (path.length > 0) {
+        unit.path = path;
+        unit.pathIndex = 0;
+        unit.state = 'move';
+        unit._pendingState = 'garrison';
+      }
+    }
+  }
+}
+
+function checkAutoUngarrison() {
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const obj = map[r][c].object;
+      if (!obj || !obj.garrison || obj.garrison.length === 0) continue;
+      // 检查附近是否还有敌人
+      let danger = false;
+      for (const other of units) {
+        if (other.hp <= 0 || other.team === obj.team) continue;
+        if (other.type === 'villager' || other.type === 'king') continue;
+        const d = Math.abs(r - other.r) + Math.abs(c - other.c);
+        if (d < GARRISON_SAFE_RANGE) { danger = true; break; }
+      }
+      if (!danger) {
+        obj._ungarrisonTimer = (obj._ungarrisonTimer || 0) + 1;
+        if (obj._ungarrisonTimer >= GARRISON_UNLEASH_DELAY && obj.garrison.length > 0) {
+          // 释放所有非战斗单位（仅村民）
+          const toRelease = obj.garrison.filter(g => g.type === 'villager');
+          for (const g of [...toRelease]) {
+            const idx = obj.garrison.indexOf(g);
+            if (idx >= 0) {
+              ungarrisonUnit(r, c, idx);
+              // 重新指派采集
+              const unit = units[units.length - 1];
+              if (unit && unit.type === 'villager' && unit.team === TEAM.PLAYER) {
+                unit.state = 'idle';
+                unit.attackTarget = null;
+              }
+            }
+          }
+        }
+      } else {
+        obj._ungarrisonTimer = 0;
+      }
+    }
+  }
 }
 
 // ====== 单位更新逻辑 ======
@@ -2887,10 +3253,13 @@ function updateAttackingUnit(unit) {
     unit.state = 'idle'; return;
   }
   if (unit.attackCooldown <= 0) {
-    const atk = UNIT_TYPES[unit.type].attack || 1;
+    const unitUpgAtk = unit.team === TEAM.ENEMY ? 0 : (upgradeAtk || 0);
+    const unitUpgDef = unit.team === TEAM.ENEMY ? 0 : (upgradeDef || 0);
+    const atk = (UNIT_TYPES[unit.type].attack || 1) + unitUpgAtk;
     let dmg;
     if (target) {
-      const armor = UNIT_TYPES[target.type] ? UNIT_TYPES[target.type].armor : 0;
+      const targetUpgDef = target.team === TEAM.ENEMY ? 0 : (upgradeDef || 0);
+      const armor = (UNIT_TYPES[target.type] ? UNIT_TYPES[target.type].armor : 0) + targetUpgDef;
       dmg = Math.max(1, atk - armor);
       target.hp -= dmg;
       if (target.hp <= 0) { removeUnit(target); unit.attackTarget = null; }
@@ -2923,7 +3292,16 @@ function updateMovingUnit(unit) {
         return;
       }
     }
-    if (unit._pendingState) {
+    if (unit._pendingState === 'garrison') {
+      unit._pendingState = null;
+      // 到达建筑附近后自动进驻
+      const ft = unit._fleeTarget;
+      if (ft) {
+        const ok = garrisonUnit(unit, ft.r, ft.c);
+        if (ok) { unit._fleeTarget = null; return; }
+      }
+      unit.state = 'idle';
+    } else if (unit._pendingState) {
       unit.state = unit._pendingState;
       unit._pendingState = null;
     } else {
@@ -2989,14 +3367,14 @@ function updateGatheringUnit(unit) {
       }
     }
     if (unit.carry > 0) {
-      const drop = findDropOff(unit.r, unit.c, unit.carryType || 'wood');
+      const drop = findDropOff(unit.r, unit.c, unit.carryType || 'wood', unit.team);
       if (drop) { unit.dropTarget = drop; unit._pendingState = null; unit.path = []; unit.pathIndex = 0; unit.state = 'deposit'; return; }
     }
     unit.gatherTarget = null; unit.carry = 0; unit.state = 'idle'; return;
   }
   const cap = UNIT_TYPES[unit.type].carryCapacity || Infinity;
   if (unit.carry >= cap) {
-    const drop = findDropOff(gr, gc, cell.resource.type);
+    const drop = findDropOff(gr, gc, cell.resource.type, unit.team);
     if (drop) {
       unit.dropTarget = drop;
       unit._pendingState = 'deposit';
@@ -3036,7 +3414,7 @@ function updateGatheringUnit(unit) {
           }
         }
         if (unit.carry > 0) {
-          const drop = findDropOff(unit.r, unit.c, depletedType);
+          const drop = findDropOff(unit.r, unit.c, depletedType, unit.team);
           if (drop) { unit.dropTarget = drop; unit._pendingState = null; unit.path = []; unit.pathIndex = 0; unit.state = 'deposit'; return; }
         }
         unit.gatherTarget = null;
@@ -3060,7 +3438,8 @@ function updateDepositingUnit(unit) {
   let resType = unit.dropTarget.obj && unit.dropTarget.obj.resourceType;
   if (!resType) resType = unit.carryType || 'wood';
   const bonus = speed100x ? 100 : 1;
-  resources[resType] = (resources[resType] || 0) + (unit.carry || 0) * bonus;
+  const resPool = unit.team === TEAM.ENEMY ? enemyResources : resources;
+  resPool[resType] = (resPool[resType] || 0) + (unit.carry || 0) * bonus;
   unit.carry = 0;
   unit.carryType = null;
   unit.dropTarget = null;
@@ -3232,6 +3611,22 @@ function drawUnit(unit) {
     ctx.beginPath(); ctx.arc(bx, by - 11, 2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#c80';
     ctx.fillRect(bx - 1, by - 14, 2, 1.5);
+  } else if (unit.type === 'king') {
+    const pal = UNIT_PALETTE[unit.team] || UNIT_PALETTE[0];
+    ctx.fillStyle = pal.body;
+    ctx.fillRect(bx - 2.5, by - 7, 5, 7);
+    ctx.fillStyle = '#e8c090';
+    ctx.beginPath(); ctx.arc(bx, by - 9, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
+    ctx.fillStyle = '#f0d040';
+    ctx.fillRect(bx - 3, by - 13, 6, 2);
+    ctx.fillStyle = '#d4a830';
+    ctx.beginPath(); ctx.moveTo(bx, by - 16); ctx.lineTo(bx - 1, by - 13); ctx.lineTo(bx + 1, by - 13); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(bx - 4, by - 15, 8, 1.5);
+    ctx.strokeStyle = '#d4a830'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.arc(bx, by - 9, 3, 0, Math.PI * 2); ctx.stroke();
   }
   drawTeamPennant(bx, by, unit.team);
   if (isSelected || unit.hp < unit.maxHp) {
@@ -3279,14 +3674,14 @@ function gatherTick() {
       if (!cell.object || cell.object.gatherRange === undefined) continue;
       const obj = cell.object;
 
-      // 农田自生产食物
       if (obj.type === 'farm') {
         const rate = obj.gatherRate * (speed100x ? 100 : 1);
         obj.gatherProgress = (obj.gatherProgress || 0) + rate;
         if (obj.gatherProgress >= 1) {
           obj.gatherProgress -= 1;
           obj.resourcesCollected = (obj.resourcesCollected || 0) + 1;
-          resources[obj.resourceType] = (resources[obj.resourceType] || 0) + 1;
+          const farmRes = obj.team === TEAM.ENEMY ? enemyResources : resources;
+          farmRes[obj.resourceType] = (farmRes[obj.resourceType] || 0) + 1;
         }
       }
       // 非农田建筑不再自动采集 — 请使用村民采集
@@ -3361,8 +3756,235 @@ function handleEdgeScroll() {
   }
 }
 
+// ====== 辅助：敌方放置建筑 ======
+function enemyPlaceBuilding(type, nearR, nearC) {
+  const bt = buildingTypes.find(b => b.type === type);
+  if (!bt || !bt.cost) return false;
+  if (!hasEnoughRes(bt.cost, enemyResources)) return false;
+  const pos = findBuildableTile(nearR, nearC, 6);
+  if (!pos) return false;
+  deductRes(bt.cost, enemyResources);
+  map[pos.r][pos.c].object = { type: 'construction', name: '建造中', buildingType: type, buildingName: bt.name, progress: 0, maxProgress: 100, team: TEAM.ENEMY };
+  // 指派附近敌方村民建造
+  let assigned = 0;
+  for (const u of units) {
+    if (assigned >= 2) break;
+    if (u.hp > 0 && u.team === TEAM.ENEMY && u.type === 'villager' && u.state === 'idle') {
+      u.state = 'idle'; u.buildingTarget = { r: pos.r, c: pos.c };
+      const path = findPath(Math.round(u.r), Math.round(u.c), pos.r, pos.c);
+      if (path.length > 0) { u.path = path; u.pathIndex = 0; u.state = 'move'; u._pendingState = 'building'; assigned++; }
+    }
+  }
+  return true;
+}
+
+// ====== 辅助：指派敌方村民采集 ======
+function enemyAssignVillager(unit) {
+  if (!enemyCampPos) return;
+  // 找最近的资源
+  let best = null, bestDist = Infinity;
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const cell = map[r][c];
+      if (cell.resource && cell.resource.amount > 0) {
+        const d = Math.abs(unit.r - r) + Math.abs(unit.c - c);
+        if (d < bestDist) {
+          // 优先采集敌方缺少的资源
+          const need = { wood: 0, gold: 0, food: 0 };
+          for (const k in need) {
+            const have = enemyResources[k] || 0;
+            const target = k === 'food' ? 100 : k === 'wood' ? 150 : 80;
+            need[k] = Math.max(0, target - have);
+          }
+          const resNeed = need[cell.resource.type] || 0;
+          const weight = d - resNeed * 0.5;
+          if (weight < bestDist) {
+            bestDist = weight;
+            best = { r: r, c: c, type: cell.resource.type };
+          }
+        }
+      }
+    }
+  }
+  if (best) {
+    unit.state = 'idle'; unit.attackTarget = null; unit.farming = false;
+    unit.buildingTarget = null; unit.attackBuildingTarget = null;
+    unit.gatherTarget = { r: best.r, c: best.c };
+    const tgtPos = offsetTarget(best.r, best.c, 0);
+    unit._finalTarget = tgtPos;
+    const path = findPath(Math.round(unit.r), Math.round(unit.c), Math.round(tgtPos.r), Math.round(tgtPos.c));
+    if (path.length > 0) { unit.path = path; unit.pathIndex = 0; unit.state = 'move'; unit._pendingState = 'gather'; }
+  }
+}
+
+// ====== 敌方 AI ======
+function updateEnemyAI() {
+  if (!enemyCampPos) return;
+
+  const ec = map[enemyCampPos.r] && map[enemyCampPos.r][enemyCampPos.c];
+  const campAlive = ec && ec.object && ec.object.team === TEAM.ENEMY && ec.object.hp > 0;
+  const enemyPop = getPopCount(TEAM.ENEMY);
+  const enemyPopMax = getPopMax(TEAM.ENEMY);
+  const enemyMilitary = units.filter(u => u.hp > 0 && u.team === TEAM.ENEMY && u.type !== 'villager' && u.type !== 'king').length;
+
+  // ---- 0. 指派闲置村民建造未完成的建筑 ----
+  for (const u of units) {
+    if (u.hp > 0 && u.team === TEAM.ENEMY && u.type === 'villager' && u.state === 'idle') {
+      // 找最近的敌方建造工地
+      let bestSite = null, bestSiteDist = Infinity;
+      for (let r = 0; r < MAP_N; r++) {
+        for (let c = 0; c < MAP_N; c++) {
+          const obj = map[r][c].object;
+          if (obj && obj.type === 'construction' && obj.team === TEAM.ENEMY) {
+            const d = Math.abs(Math.round(u.r) - r) + Math.abs(Math.round(u.c) - c);
+            if (d < bestSiteDist) { bestSiteDist = d; bestSite = { r, c }; }
+          }
+        }
+      }
+      if (bestSite) {
+        u.state = 'idle'; u.attackTarget = null; u.farming = false;
+        u.gatherTarget = null; u.dropTarget = null; u.carry = 0;
+        u.buildingTarget = { r: bestSite.r, c: bestSite.c };
+        const path = findPath(Math.round(u.r), Math.round(u.c), bestSite.r, bestSite.c);
+        if (path.length > 0) { u.path = path; u.pathIndex = 0; u.state = 'move'; u._pendingState = 'building'; continue; }
+      }
+      // 无工地 → 指派采集
+      enemyAssignVillager(u);
+    }
+  }
+
+  // ---- 1. 敌方 TC 训练村民（每300帧检查一次） ----
+  enemyTrainTimer++;
+  if (enemyTrainTimer >= 300 && campAlive) {
+    enemyTrainTimer = 0;
+    if (enemyPop < enemyPopMax && enemyPop < 20) {
+      const tcCell = map[enemyCampPos.r][enemyCampPos.c];
+      if (tcCell && tcCell.object) {
+        const trainAct = buildingActions['town-center'].actions.find(a => a.id === 'villager');
+        if (trainAct) startTraining(enemyCampPos.r, enemyCampPos.c, trainAct, TEAM.ENEMY);
+      }
+    }
+  }
+
+  // ---- 2. 经济建设：建造房屋/资源建筑 ----
+  enemyPatrolTimer++;
+  if (enemyPatrolTimer >= 600) {
+    enemyPatrolTimer = 0;
+    // 人口不足时造房
+    if (enemyPopMax - enemyPop < 4 && campAlive) {
+      enemyPlaceBuilding('house', enemyCampPos.r, enemyCampPos.c);
+    }
+    // 建造伐木场/采矿场/磨坊（每个最多1个）
+    const hasLC = map.some(r => r.some(c => c.object && c.object.type === 'lumber-camp' && c.object.team === TEAM.ENEMY));
+    const hasMC = map.some(r => r.some(c => c.object && c.object.type === 'mining-camp' && c.object.team === TEAM.ENEMY));
+    const hasMill = map.some(r => r.some(c => c.object && c.object.type === 'mill' && c.object.team === TEAM.ENEMY));
+    if (!hasLC && (enemyResources.wood || 0) > 80) enemyPlaceBuilding('lumber-camp', enemyCampPos.r, enemyCampPos.c);
+    if (!hasMC && (enemyResources.gold || 0) > 50) enemyPlaceBuilding('mining-camp', enemyCampPos.r, enemyCampPos.c);
+    if (!hasMill && (enemyResources.food || 0) > 80) enemyPlaceBuilding('mill', enemyCampPos.r, enemyCampPos.c);
+  }
+
+  // ---- 3. 军事发展：建造兵营/射箭场 ----
+  enemyBuildTimer++;
+  if (enemyBuildTimer >= 900) {
+    enemyBuildTimer = 0;
+    const hasBarracks = map.some(r => r.some(c => c.object && c.object.type === 'barracks' && c.object.team === TEAM.ENEMY));
+    const hasArchery = map.some(r => r.some(c => c.object && c.object.type === 'archery-range' && c.object.team === TEAM.ENEMY));
+    const hasStable = map.some(r => r.some(c => c.object && c.object.type === 'stable' && c.object.team === TEAM.ENEMY));
+    const econScore = (enemyResources.wood || 0) + (enemyResources.gold || 0) + (enemyResources.food || 0);
+
+    if (!hasBarracks && econScore > 200 && campAlive) {
+      enemyPlaceBuilding('barracks', enemyCampPos.r, enemyCampPos.c);
+    } else if (hasBarracks && !hasArchery && econScore > 300 && campAlive) {
+      enemyPlaceBuilding('archery-range', enemyCampPos.r, enemyCampPos.c);
+    } else if (hasBarracks && !hasStable && econScore > 400 && campAlive) {
+      enemyPlaceBuilding('stable', enemyCampPos.r, enemyCampPos.c);
+    }
+  }
+
+  // ---- 4. 训练军事单位 ----
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const obj = map[r][c].object;
+      if (!obj || obj.team !== TEAM.ENEMY) continue;
+      if (obj.trainingQueue && obj.trainingQueue.length >= 3) continue;
+      const ba = buildingActions[obj.type];
+      if (!ba || ba.actions.length === 0) continue;
+      const trainable = ba.actions.filter(a => a.type === 'train' && a.id !== 'villager');
+      if (trainable.length === 0) continue;
+      const action = trainable[Math.floor(Math.random() * trainable.length)];
+      if (hasEnoughRes(action.cost, enemyResources) && enemyPop < enemyPopMax) {
+        startTraining(r, c, action, TEAM.ENEMY);
+      }
+    }
+  }
+
+  // ---- 5. 进攻波次 ----
+  enemyWaveTimer++;
+  if (enemyWaveTimer >= 1800 && playerTCPos && enemyMilitary >= 6) {
+    enemyWaveTimer = 0;
+    const attackers = units.filter(u =>
+      u.hp > 0 && u.team === TEAM.ENEMY && u.type !== 'villager' && u.type !== 'king' &&
+      (u.state === 'idle' || u.state === 'move')
+    );
+    const toSend = Math.max(3, Math.floor(attackers.length * 0.6));
+    let sent = 0;
+    for (const unit of units) {
+      if (sent >= toSend) break;
+      if (unit.hp <= 0 || unit.team !== TEAM.ENEMY || unit.type === 'villager' || unit.type === 'king') continue;
+      if (unit.state === 'idle' || unit.state === 'move') {
+        const targetR = playerTCPos.r + Math.floor((Math.random() - 0.5) * 5);
+        const targetC = playerTCPos.c + Math.floor((Math.random() - 0.5) * 5);
+        const path = findPath(Math.round(unit.r), Math.round(unit.c), targetR, targetC);
+        if (path.length > 0) {
+          unit.path = path; unit.pathIndex = 0; unit.state = 'move';
+          unit._pendingState = 'attack'; sent++;
+        }
+      }
+    }
+  }
+}
+
+// ====== 瞭望塔自动攻击 ======
+function updateTowers() {
+  for (let r = 0; r < MAP_N; r++) {
+    for (let c = 0; c < MAP_N; c++) {
+      const obj = map[r][c].object;
+      if (!obj || obj.type !== 'tower' || obj.hp <= 0) continue;
+      if (obj.team === undefined) continue;
+      const range = 6;
+      obj.attackCooldown = (obj.attackCooldown || 0) - 1;
+      if (obj.attackCooldown > 0) continue;
+      for (const unit of units) {
+        if (unit.hp <= 0 || unit.team === obj.team) continue;
+        const d = Math.abs(r - Math.round(unit.r)) + Math.abs(c - Math.round(unit.c));
+        if (d <= range) {
+          const towerAtk = 5;
+          unit.hp -= towerAtk;
+          if (unit.hp <= 0) removeUnit(unit);
+          obj.attackCooldown = 40;
+          break;
+        }
+      }
+    }
+  }
+}
+
 // ====== 主渲染 ======
 function render() {
+  if (gameOver) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#ff4444';
+    ctx.font = 'bold 48px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(gameOverMessage, W / 2, H / 2 - 20);
+    ctx.fillStyle = '#f0d9a0';
+    ctx.font = '18px "Segoe UI", Arial, sans-serif';
+    ctx.fillText('按 R 重新开始', W / 2, H / 2 + 40);
+    ctx.textAlign = 'left';
+    return;
+  }
   handleEdgeScroll();
   ctx.clearRect(0, 0, W, H);
 
@@ -3376,6 +3998,10 @@ function render() {
 
   gatherTick();
   updateUnits();
+  checkAutoGarrison();
+  checkAutoUngarrison();
+  updateEnemyAI();
+  updateTowers();
   processTrainingQueues();
   updateResources();
   updatePopulation();
@@ -3385,6 +4011,7 @@ function render() {
   if (_panelUpdateFrame % 10 === 0) {
     updateBuildingPanel();
     updateSidePanelProgress();
+    updateGarrisonPanel();
   }
 
   buildingLabels = [];
@@ -3766,8 +4393,8 @@ canvas.addEventListener('contextmenu', (e) => {
     return;
   }
 
-  // 右键建造建筑
-  if (cell.object && cell.object.type === 'construction') {
+  // 右键建造建筑（仅己方工地）
+  if (cell.object && cell.object.type === 'construction' && (!cell.object.team || cell.object.team === TEAM.PLAYER)) {
     selectedUnits.forEach((unit, i) => {
       if (unit.type === 'villager') {
         unit.state = 'idle';
@@ -3783,23 +4410,34 @@ canvas.addEventListener('contextmenu', (e) => {
     return;
   }
 
-  // 右键卸货点存放
-  if (cell.object && ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type)) {
-    selectedUnits.forEach((unit, i) => {
-      if (unit.type === 'villager' && unit.carry > 0) {
+  // 右键卸货 或 驻扎（用快照避免forEach中修改selectedUnits导致问题）
+  if (cell.object && (canGarrison(cell.object.type) || ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type))) {
+    const unitsSnapshot = [...selectedUnits];
+    for (let i = 0; i < unitsSnapshot.length; i++) {
+      const unit = unitsSnapshot[i];
+      if (unit.hp <= 0) continue;
+      // 村民有资源且该建筑可卸货 → 卸货
+      if (unit.type === 'villager' && unit.carry > 0 && ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type)) {
         unit.state = 'idle'; unit.attackTarget = null; unit.farming = false; unit.gatherTarget = null; unit.buildingTarget = null;
         unit.dropTarget = { r: hit.r, c: hit.c, obj: cell.object };
         moveUnitTo(unit, offsetTarget(hit.r, hit.c, i), 'deposit');
-      } else {
+      }
+      // 非国王单位 → 驻扎
+      else if (unit.type !== 'king' && canGarrison(cell.object.type) && cell.object.team === TEAM.PLAYER) {
+        garrisonUnit(unit, hit.r, hit.c);
+      }
+      // 否则移动过去
+      else {
         unit.state = 'idle'; unit.gatherTarget = null; unit.attackTarget = null; unit.farming = false; unit.buildingTarget = null; unit.carry = 0; unit.dropTarget = null;
         moveUnitTo(unit, offsetTarget(hit.r, hit.c, i), null);
       }
-    });
+    }
     return;
   }
 
   // 右键移动
   selectedUnits.forEach((unit, i) => {
+    if (unit.hp <= 0) return;
     unit.state = 'idle';
     unit.gatherTarget = null;
     unit.attackTarget = null;
@@ -3875,7 +4513,13 @@ window.addEventListener('keydown', (e) => {
         }
       selectedTile = null;
       units = []; selectedUnits = [];
+      gameOver = false; gameOverMessage = '';
+      enemyCampPos = null; playerTCPos = null;
+      enemyPatrolTimer = 0; enemyTrainTimer = 0; enemyBuildTimer = 0; enemyWaveTimer = 0;
+      enemyResources = { wood: 200, gold: 150, food: 200 };
+      resources.wood = 200; resources.gold = 150; resources.food = 200;
       spawnInitialUnits();
+      spawnEnemyCamp();
       break;
     }
     // 单位训练快捷键
@@ -3925,7 +4569,39 @@ document.getElementById('sideInfoPanel').addEventListener('click', (e) => {
   if (!ba) return;
   const action = ba.actions.find(a => a.id === actId);
   if (!action) return;
-  startTraining(r, c, action);
+  const team = cell.object ? cell.object.team : TEAM.PLAYER;
+  const res = team === TEAM.ENEMY ? enemyResources : resources;
+  // 交易和升级即时处理
+  if (action.type === 'trade') {
+    if (hasEnoughRes(action.cost, res)) {
+      deductRes(action.cost, res);
+      if (action.output) {
+        for (const k in action.output) {
+          res[k] = (res[k] || 0) + action.output[k];
+        }
+      }
+      if (team === TEAM.PLAYER) setHint('交易完成！');
+    } else {
+      if (team === TEAM.PLAYER) setHint('资源不足！');
+    }
+    return;
+  }
+  if (action.type === 'upgrade') {
+    if (hasEnoughRes(action.cost, res)) {
+      deductRes(action.cost, res);
+      if (action.id === 'atk_upgrade') {
+        upgradeAtk = (upgradeAtk || 0) + 1;
+        if (team === TEAM.PLAYER) setHint('⚔ 攻击力+1！');
+      } else if (action.id === 'def_upgrade') {
+        upgradeDef = (upgradeDef || 0) + 1;
+        if (team === TEAM.PLAYER) setHint('🛡 护甲+1！');
+      }
+    } else {
+      if (team === TEAM.PLAYER) setHint('资源不足！');
+    }
+    return;
+  }
+  startTraining(r, c, action, team);
 });
 
 // ====== 开始 ======
