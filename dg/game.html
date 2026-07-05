@@ -38,16 +38,32 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 4px;
   }
-  #buildingPanel .panel-title {
-    color: #f0d9a0;
-    font-size: 11px;
-    font-weight: bold;
+  #buildingPanel .panel-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  #buildingPanel .panel-tabs .tab {
+    flex: 1;
     text-align: center;
-    padding-bottom: 5px;
-    margin-bottom: 5px;
-    border-bottom: 1px solid rgba(240,217,160,0.15);
-    font-family: 'Segoe UI', Arial, sans-serif;
-    letter-spacing: 2px;
+    padding: 4px 0;
+    font-size: 11px;
+    color: rgba(240,217,160,0.5);
+    background: rgba(240,217,160,0.05);
+    border: 1px solid rgba(240,217,160,0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.1s;
+  }
+  #buildingPanel .panel-tabs .tab:hover {
+    background: rgba(240,217,160,0.12);
+    color: rgba(240,217,160,0.8);
+  }
+  #buildingPanel .panel-tabs .tab.active {
+    background: rgba(240,217,160,0.18);
+    border-color: rgba(240,217,160,0.35);
+    color: #f0d9a0;
   }
   .building-item {
     display: flex;
@@ -100,6 +116,20 @@
     display: none;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     white-space: nowrap;
+  }
+  #ageDisplay {
+    position: fixed;
+    top: 12px;
+    right: 60px;
+    color: #f0d9a0;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: rgba(0,0,0,0.5);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(240,217,160,0.15);
+    z-index: 25;
+    pointer-events: none;
   }
   #speedToggle {
     position: fixed;
@@ -170,13 +200,13 @@
   #resourcePanel .rp-pop .pop-num { font-weight: bold; color: #f0d9a0; }
   #resourcePanel .rp-pop .pop-max { color: rgba(240,217,160,0.4); }
 
-  /* ====== 底部信息面板 ====== */
+  /* ====== 右侧信息面板 ====== */
   #sideInfoPanel {
     position: fixed;
     bottom: 16px;
-    left: 275px;
-    width: 190px;
-    height: 120px;
+    right: 16px;
+    width: 280px;
+    height: 250px;
     z-index: 20;
     background: linear-gradient(180deg, rgba(25,18,10,0.96), rgba(15,10,5,0.96));
     border: 2px solid #8a7a5a;
@@ -190,10 +220,9 @@
     overflow-y: auto;
   }
   #sideInfoPanel #selectionContent {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1px 8px;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
   #sideInfoPanel .sip-title {
     font-size: 12px;
@@ -292,15 +321,14 @@
   #garrisonPanel {
     position: fixed;
     bottom: 16px;
-    left: calc(275px + 190px + 8px);
-    width: 76px;
-    height: auto;
-    min-height: 60px;
+    right: 320px;
+    width: 120px;
+    height: 170px;
     z-index: 20;
     background: linear-gradient(180deg, rgba(25,18,10,0.96), rgba(15,10,5,0.96));
     border: 2px solid #8a7a5a;
     border-radius: 8px;
-    padding: 4px 4px;
+    padding: 4px 6px;
     user-select: none;
     box-shadow: 0 4px 30px rgba(0,0,0,0.8);
     color: #f0d9a0;
@@ -310,49 +338,46 @@
     flex-direction: column;
   }
   #garrisonPanel .gp-title {
-    font-size: 10px;
+    font-size: 12px;
     text-align: center;
-    padding-bottom: 3px;
-    border-bottom: 1px solid rgba(240,217,160,0.1);
-    margin-bottom: 3px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(240,217,160,0.15);
+    margin-bottom: 4px;
+    flex-shrink: 0;
   }
   #garrisonContent {
     flex: 1;
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
+    gap: 4px;
     align-content: flex-start;
     overflow-y: auto;
     justify-content: center;
   }
   #garrisonContent .g-icon {
-    width: 20px;
-    height: 20px;
-    font-size: 13px;
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
     text-align: center;
-    line-height: 20px;
+    line-height: 30px;
     background: rgba(240,217,160,0.08);
     border: 1px solid rgba(240,217,160,0.1);
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.1s;
-    flex: 0 0 20px;
+    flex: 0 0 30px;
   }
   #garrisonContent .g-icon:hover {
     background: rgba(240,217,160,0.2);
     border-color: rgba(240,217,160,0.35);
   }
-  #garrisonContent .g-icon.g-empty {
-    background: rgba(240,217,160,0.03);
-    border-color: rgba(240,217,160,0.05);
-    cursor: default;
-  }
   #garrisonReleaseBtn {
-    margin-top: 3px;
-    padding: 2px 0;
-    font-size: 10px;
+    margin-top: 4px;
+    padding: 4px 0;
+    font-size: 11px;
     text-align: center;
     background: rgba(200,80,80,0.2);
+    flex-shrink: 0;
     border: 1px solid rgba(200,80,80,0.3);
     border-radius: 3px;
     color: #f0a0a0;
@@ -372,11 +397,15 @@
 </div>
 <canvas id="game"></canvas>
 <div id="buildingPanel">
-  <div class="panel-title">🏗 建筑</div>
+  <div class="panel-tabs">
+    <span class="tab active" data-tab="econ">🏗 生产</span>
+    <span class="tab" data-tab="military">⚔ 军事</span>
+  </div>
   <div class="panel-grid" id="buildingGrid"></div>
 </div>
 <div id="placementHint">点击地块放置建筑 · <span class="key">右键</span>取消</div>
 <div id="speedToggle" class="speed-off">🐇 1×</div>
+<div id="ageDisplay">🌑 黑暗时代</div>
 <div id="cheatBtn">💰 +100 <span style="font-size:11px;opacity:0.6">G</span></div>
 <div id="resourcePanel">
   <div class="rp-item"><span class="rp-icon">🪵</span><span class="rp-amt" id="resWood" style="color:#6abf5a">0</span></div>
@@ -446,25 +475,26 @@ let upgradeDef = 0;
 
 // ====== 建造模式状态 ======
 let placementMode = null;
+let buildingTab = 'econ'; // 'econ' | 'military'
 let ghostTile = null;
 let ghostValid = false;
 
 const buildingTypes = [
-  { type: 'town-center',  name: '城镇中心', cost: { wood: 200, gold: 100 }, icon: '🏛' },
-  { type: 'barracks',     name: '兵营',     cost: { wood: 150 },            icon: '⚔' },
-  { type: 'archery-range',name: '射箭场',   cost: { wood: 100 },            icon: '🏹' },
-  { type: 'stable',       name: '马厩',     cost: { wood: 100, gold: 50 },  icon: '🐴' },
-  { type: 'church',       name: '教堂',     cost: { wood: 120, gold: 80 },  icon: '⛪' },
-  { type: 'blacksmith',   name: '铁匠铺',   cost: { wood: 150, gold: 50 },  icon: '🔨' },
-  { type: 'market',       name: '市场',     cost: { wood: 80 },             icon: '🏪' },
-  { type: 'house',        name: '房屋',     cost: { wood: 50 },             icon: '🏠' },
-  { type: 'tower',        name: '瞭望塔',   cost: { wood: 80, gold: 40 },   icon: '🗼' },
-  { type: 'wall',         name: '城墙',     cost: { wood: 30 },             icon: '🧱' },
-  { type: 'siege-workshop',name: '攻城工坊', cost: { wood: 200, gold: 100 }, icon: '⚙' },
-  { type: 'lumber-camp',  name: '伐木场',   cost: { wood: 60 },             icon: '🪵' },
-  { type: 'mining-camp',  name: '采矿场',   cost: { wood: 60 },             icon: '⛏️' },
-  { type: 'mill',         name: '磨坊',     cost: { wood: 60 },             icon: '🌾' },
-  { type: 'farm',         name: '农田',     cost: { wood: 40 },             icon: '🌱' },
+  { type: 'town-center',  name: '城镇中心', cost: { wood: 200, gold: 100 }, icon: '🏛', ageReq: 0 },
+  { type: 'barracks',     name: '兵营',     cost: { wood: 150 },            icon: '⚔', ageReq: 1 },
+  { type: 'archery-range',name: '射箭场',   cost: { wood: 100 },            icon: '🏹', ageReq: 1, requires: 'barracks' },
+  { type: 'stable',       name: '马厩',     cost: { wood: 100, gold: 50 },  icon: '🐴', ageReq: 2, requires: 'barracks' },
+  { type: 'church',       name: '教堂',     cost: { wood: 120, gold: 80 },  icon: '⛪', ageReq: 2 },
+  { type: 'blacksmith',   name: '铁匠铺',   cost: { wood: 150, gold: 50 },  icon: '🔨', ageReq: 1 },
+  { type: 'market',       name: '市场',     cost: { wood: 80 },             icon: '🏪', ageReq: 1 },
+  { type: 'house',        name: '房屋',     cost: { wood: 50 },             icon: '🏠', ageReq: 0 },
+  { type: 'tower',        name: '瞭望塔',   cost: { wood: 80, gold: 40 },   icon: '🗼', ageReq: 1 },
+  { type: 'wall',         name: '城墙',     cost: { wood: 30 },             icon: '🧱', ageReq: 1 },
+  { type: 'siege-workshop',name: '攻城工坊', cost: { wood: 200, gold: 100 }, icon: '⚙', ageReq: 2, requires: 'blacksmith' },
+  { type: 'lumber-camp',  name: '伐木场',   cost: { wood: 60 },             icon: '🪵', ageReq: 0 },
+  { type: 'mining-camp',  name: '采矿场',   cost: { wood: 60 },             icon: '⛏️', ageReq: 0 },
+  { type: 'mill',         name: '磨坊',     cost: { wood: 60 },             icon: '🌾', ageReq: 0 },
+  { type: 'farm',         name: '农田',     cost: { wood: 40 },             icon: '🌱', ageReq: 0, requires: 'mill' },
 ];
 
 const buildingData = {
@@ -489,6 +519,22 @@ const UNIT_PALETTE = {
   0: { body: '#4488cc', head: '#66aaee', dark: '#2255aa', banner: '#2266bb' },
   1: { body: '#cc4444', head: '#ee6666', dark: '#aa2222', banner: '#cc2222' },
 };
+
+// ====== 时代/科技系统 ======
+const AGES = ['黑暗时代', '封建时代', '城堡时代', '帝王时代'];
+const AGE_ICONS = ['🌑', '⚜', '🏰', '👑'];
+const AGE_COSTS = [
+  null,
+  { food: 200, gold: 100 },
+  { food: 500, gold: 300 },
+  { food: 1000, gold: 500, wood: 500 },
+];
+let playerAge = 0;
+let enemyAge = 0;
+
+function getTeamAge(team) {
+  return team === TEAM.ENEMY ? enemyAge : playerAge;
+}
 
 function drawTeamPennant(x, y, team) {
   const pal = UNIT_PALETTE[team] || UNIT_PALETTE[0];
@@ -560,41 +606,44 @@ const buildingActions = {
   'town-center': {
     name: '城镇中心', icon: '🏛',
     actions: [
-      { type: 'train', id: 'villager', name: '村民', icon: '👷', cost: { food: 50 }, time: 300 },
+      { type: 'train', id: 'villager', name: '村民', icon: '👷', cost: { food: 50 }, time: 300, ageReq: 0 },
+      { type: 'advance_age', id: 'adv_feudal', name: '→封建时代', icon: '⬆', cost: { food: 200, gold: 100 }, time: 600, ageReq: 0, targetAge: 1 },
+      { type: 'advance_age', id: 'adv_castle', name: '→城堡时代', icon: '⬆', cost: { food: 500, gold: 300 }, time: 800, ageReq: 1, targetAge: 2 },
+      { type: 'advance_age', id: 'adv_imperial', name: '→帝王时代', icon: '⬆', cost: { food: 1000, gold: 500, wood: 500 }, time: 1000, ageReq: 2, targetAge: 3 },
     ],
   },
   'barracks': {
     name: '兵营', icon: '⚔',
     actions: [
-      { type: 'train', id: 'spearman', name: '长矛兵', icon: '🔱', cost: { food: 60, wood: 20 }, time: 300 },
-      { type: 'train', id: 'swordsman', name: '剑士', icon: '⚔', cost: { food: 70, gold: 30 }, time: 400 },
-      { type: 'train', id: 'heavy_infantry', name: '重装步兵', icon: '🛡', cost: { food: 120, gold: 50 }, time: 500 },
+      { type: 'train', id: 'spearman', name: '长矛兵', icon: '🔱', cost: { food: 60, wood: 20 }, time: 300, ageReq: 1 },
+      { type: 'train', id: 'swordsman', name: '剑士', icon: '⚔', cost: { food: 70, gold: 30 }, time: 400, ageReq: 2 },
+      { type: 'train', id: 'heavy_infantry', name: '重装步兵', icon: '🛡', cost: { food: 120, gold: 50 }, time: 500, ageReq: 3 },
     ],
   },
   'archery-range': {
     name: '射箭场', icon: '🏹',
     actions: [
-      { type: 'train', id: 'archer', name: '弓箭手', icon: '🏹', cost: { wood: 50, gold: 20 }, time: 350 },
-      { type: 'train', id: 'cavalry_archer', name: '骑射手', icon: '🏇', cost: { wood: 80, gold: 40 }, time: 450 },
+      { type: 'train', id: 'archer', name: '弓箭手', icon: '🏹', cost: { wood: 50, gold: 20 }, time: 350, ageReq: 1 },
+      { type: 'train', id: 'cavalry_archer', name: '骑射手', icon: '🏇', cost: { wood: 80, gold: 40 }, time: 450, ageReq: 2 },
     ],
   },
   'stable': {
     name: '马厩', icon: '🐴',
     actions: [
-      { type: 'train', id: 'scout', name: '侦察兵', icon: '🔭', cost: { food: 50, gold: 20 }, time: 250 },
-      { type: 'train', id: 'cavalry', name: '骑兵', icon: '🐴', cost: { food: 100, gold: 50 }, time: 500 },
+      { type: 'train', id: 'scout', name: '侦察兵', icon: '🔭', cost: { food: 50, gold: 20 }, time: 250, ageReq: 1 },
+      { type: 'train', id: 'cavalry', name: '骑兵', icon: '🐴', cost: { food: 100, gold: 50 }, time: 500, ageReq: 2 },
     ],
   },
   'siege-workshop': {
     name: '攻城工坊', icon: '⚙',
     actions: [
-      { type: 'train', id: 'siege_ram', name: '攻城锤', icon: '🏋', cost: { wood: 150, gold: 80 }, time: 700 },
+      { type: 'train', id: 'siege_ram', name: '攻城锤', icon: '🏋', cost: { wood: 150, gold: 80 }, time: 700, ageReq: 3 },
     ],
   },
   'church': {
     name: '教堂', icon: '⛪',
     actions: [
-      { type: 'train', id: 'monk', name: '僧侣', icon: '🙏', cost: { gold: 100 }, time: 400 },
+      { type: 'train', id: 'monk', name: '僧侣', icon: '🙏', cost: { gold: 100 }, time: 400, ageReq: 2 },
     ],
   },
   'enemy-camp': {
@@ -604,8 +653,8 @@ const buildingActions = {
   'blacksmith': {
     name: '铁匠铺', icon: '🔨',
     actions: [
-      { type: 'upgrade', id: 'atk_upgrade', name: '锻造攻击+1', icon: '⚔', cost: { wood: 100, gold: 50 }, time: 1 },
-      { type: 'upgrade', id: 'def_upgrade', name: '锻造护甲+1', icon: '🛡', cost: { wood: 100, gold: 50 }, time: 1 },
+      { type: 'upgrade', id: 'atk_upgrade', name: '锻造攻击+1', icon: '⚔', cost: { wood: 100, gold: 50 }, time: 1, ageReq: 1 },
+      { type: 'upgrade', id: 'def_upgrade', name: '锻造护甲+1', icon: '🛡', cost: { wood: 100, gold: 50 }, time: 1, ageReq: 1 },
     ],
   },
   'market': {
@@ -802,22 +851,29 @@ function updateSidePanel() {
     if (!ba || ba.actions.length === 0) {
       html += `<div class="sip-hint sip-full" style="text-align:left;padding:2px 0">该建筑无可用功能</div>`;
     } else {
+      const teamAge = getTeamAge(obj.team);
       const queue = obj.trainingQueue || [];
       for (const act of ba.actions) {
         const inQueue = queue.filter(q => q.actionId === act.id);
         const count = inQueue.length;
         const front = count > 0 ? inQueue[0] : null;
+        const ageOk = act.ageReq === undefined || act.ageReq <= teamAge;
+        const meetsAge = act.type === 'advance_age' ? (teamAge === act.ageReq && teamAge < 3) : ageOk;
         const canAfford = hasEnoughRes(act.cost);
-        const disabled = !canAfford ? 'cursor:default;opacity:0.5' : '';
+        let disabled = '';
+        if (!meetsAge) { disabled = 'cursor:default;opacity:0.35'; }
+        else if (!canAfford) { disabled = 'cursor:default;opacity:0.5'; }
         let costHtml = act.cost ? Object.entries(act.cost).map(([k, v]) => {
           const have = resources[k] || 0;
           return `<span class="${have < v ? 'insuff' : ''}">${resourceLabels[k]||k}${v}</span>`;
         }).join(' ') : '';
         let barHtml = front ? `<div class="ab-bar-wrap"><div class="ab-bar" style="width:${Math.min(100, (front.progress/front.totalTime)*100)}%"></div></div>` : '';
+        let lockLabel = '';
+        if (!meetsAge) { lockLabel = `<span style="font-size:8px;color:#ff8844;margin-left:4px">🔒${AGES[act.ageReq]}</span>`; }
         const badge = count > 0 ? `<span style="position:absolute;right:4px;top:2px;background:#d4a830;color:#1a1a2e;font-size:9px;font-weight:bold;border-radius:8px;padding:1px 5px;line-height:1.3">${count}</span>` : '';
         html += `<div class="action-btn sip-full" data-br="${r}" data-bc="${c}" data-act="${act.id}" style="position:relative;${disabled}">
           <span class="ab-icon">${act.icon}</span>
-          <span class="ab-name">${act.name}</span>
+          <span class="ab-name">${act.name}${lockLabel}</span>
           <span class="ab-cost">${costHtml}</span>${badge}${barHtml}</div>`;
       }
     }
@@ -911,6 +967,7 @@ let enemyPatrolTimer = 0;
 let enemyTrainTimer = 0;
 let enemyBuildTimer = 0;
 let enemyWaveTimer = 0;
+let enemyAgeTimer = 0;
 function createUnit(type, r, c, team) {
   const def = UNIT_TYPES[type];
   if (!def) return null;
@@ -947,7 +1004,7 @@ function canGarrison(buildingType) {
   return getGarrisonMax(buildingType) > 0;
 }
 
-function garrisonUnit(unit, bR, bC) {
+function garrisonUnit(unit, bR, bC, isAuto) {
   const bCell = map[bR] && map[bR][bC];
   if (!bCell || !bCell.object) return false;
   const bt = bCell.object.type;
@@ -956,7 +1013,7 @@ function garrisonUnit(unit, bR, bC) {
   const maxCapacity = getGarrisonMax(bt);
   if (garrison.length >= maxCapacity) return false;
   bCell.object._lastGarrisonTime = performance ? performance.now() : Date.now();
-  garrison.push({ type: unit.type, team: unit.team });
+  garrison.push({ type: unit.type, team: unit.team, autoGarrisoned: !!isAuto });
   removeUnit(unit);
   updateGarrisonPanel();
   return true;
@@ -1017,16 +1074,12 @@ function updateGarrisonPanel() {
     return;
   }
   let html = '';
-  for (let i = 0; i < maxCap; i++) {
+  for (let i = 0; i < garrisonArr.length; i++) {
     const g = garrisonArr[i];
-    if (g) {
-      const icon = UNIT_ICON_MAP[g.type] || '👤';
-      html += `<div class="g-icon" data-br="${bR}" data-bc="${bC}" data-gidx="${i}">${icon}</div>`;
-    } else {
-      html += `<div class="g-icon g-empty"></div>`;
-    }
+    const icon = UNIT_ICON_MAP[g.type] || '👤';
+    html += `<div class="g-icon" data-br="${bR}" data-bc="${bC}" data-gidx="${i}">${icon}</div>`;
   }
-  content.innerHTML = html;
+  content.innerHTML = html || '<div style="color:rgba(240,217,160,0.2);font-size:10px;text-align:center;padding:8px 0">空</div>';
 }
 
 // 驻扎面板点击事件（卸出单位）
@@ -1174,6 +1227,15 @@ function spawnEnemyCamp() {
   }
 }
 
+function hasBuildingType(type, team) {
+  for (let r = 0; r < MAP_N; r++)
+    for (let c = 0; c < MAP_N; c++) {
+      const obj = map[r][c].object;
+      if (obj && obj.type === type && obj.team === team && obj.hp > 0) return true;
+    }
+  return false;
+}
+
 function completeConstruction(r, c) {
   const cell = map[r][c];
   const site = cell.object;
@@ -1202,8 +1264,11 @@ function placeBuilding(r, c, building) {
   if (cell.object) return false;
   if (cell.resource) return false;
   const bt = buildingTypes.find(b => b.type === building.type);
-  if (bt && bt.cost && !hasEnoughRes(bt.cost)) return false;
-  if (bt && bt.cost) deductRes(bt.cost);
+  if (!bt) return false;
+  if (bt.ageReq !== undefined && bt.ageReq > playerAge) return false;
+  if (bt.requires && !hasBuildingType(bt.requires, TEAM.PLAYER)) return false;
+  if (bt.cost && !hasEnoughRes(bt.cost)) return false;
+  if (bt.cost) deductRes(bt.cost);
   cell.object = { type: 'construction', name: '建造中', buildingType: building.type, buildingName: building.name, progress: 0, maxProgress: 100 };
   if (building.type === 'wall') updateWallConnections(r, c);
   return true;
@@ -1218,18 +1283,47 @@ function cancelPlacement() {
 }
 
 // ====== 建筑面板事件 ======
+function getBuildingLockReasons(bt) {
+  const reasons = [];
+  if (bt.ageReq !== undefined && bt.ageReq > playerAge) reasons.push(`🔒${AGES[bt.ageReq]}`);
+  if (bt.requires && !hasBuildingType(bt.requires, TEAM.PLAYER)) {
+    const reqB = buildingTypes.find(b => b.type === bt.requires);
+    reasons.push(`⬅${reqB ? reqB.name : bt.requires}`);
+  }
+  return reasons;
+}
+
+function isBuildingUnlocked(bt) {
+  if (bt.ageReq !== undefined && bt.ageReq > playerAge) return false;
+  if (bt.requires && !hasBuildingType(bt.requires, TEAM.PLAYER)) return false;
+  return true;
+}
+
 function renderBuildingPanel() {
   const grid = document.getElementById('buildingGrid');
-  grid.innerHTML = buildingTypes.map(bt => {
-    const canAfford = !bt.cost || hasEnoughRes(bt.cost);
+  const econTypes = ['town-center', 'house', 'lumber-camp', 'mining-camp', 'mill', 'farm', 'market'];
+  const filtered = buildingTypes.filter(bt =>
+    buildingTab === 'econ' ? econTypes.includes(bt.type) : !econTypes.includes(bt.type)
+  );
+  grid.innerHTML = filtered.map(bt => {
+    const unlocked = isBuildingUnlocked(bt);
+    const canAfford = unlocked && (!bt.cost || hasEnoughRes(bt.cost));
     const costHtml = bt.cost ? Object.entries(bt.cost).map(([k, v]) =>
       `<span style="font-size:9px;opacity:${canAfford?0.7:0.4};color:${canAfford?'#f0d9a0':'#ff6666'}">${resourceLabels[k]||k}${v}</span>`
     ).join(' ') : '';
     const active = placementMode && placementMode.type === bt.type ? 'active' : '';
-    const disabled = canAfford ? '' : 'pointer-events:none;opacity:0.5;';
+    let disabled = '';
+    let lockLabel = '';
+    if (!unlocked) {
+      disabled = 'pointer-events:none;opacity:0.35;';
+      const reasons = getBuildingLockReasons(bt);
+      lockLabel = `<div style="font-size:8px;color:#ff8844;line-height:1.3">${reasons.join('<br>')}</div>`;
+    } else if (!canAfford) {
+      disabled = 'pointer-events:none;opacity:0.5;';
+    }
     return `<div class="building-item ${active}" data-type="${bt.type}" style="${disabled}">
       <span class="bi">${bt.icon||'🏗'}</span>${bt.name}
-      <div style="font-size:9px;line-height:1.2">${costHtml}</div>
+      <div style="font-size:9px;line-height:1.2">${costHtml}</div>${lockLabel}
     </div>`;
   }).join('');
   grid.querySelectorAll('.building-item').forEach(el => {
@@ -1238,6 +1332,11 @@ function renderBuildingPanel() {
       const type = el.dataset.type;
       const building = buildingTypes.find(b => b.type === type);
       if (!building) return;
+      if (!isBuildingUnlocked(building)) {
+        const reasons = getBuildingLockReasons(building);
+        setHint(reasons.join(' · '));
+        return;
+      }
       if (building.cost && !hasEnoughRes(building.cost)) return;
       if (placementMode && placementMode.type === type) {
         cancelPlacement();
@@ -1251,27 +1350,30 @@ function renderBuildingPanel() {
     });
   });
 }
-renderBuildingPanel();
+
+// 建筑面板标签切换
+document.querySelectorAll('#buildingPanel .panel-tabs .tab').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('#buildingPanel .panel-tabs .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    buildingTab = el.dataset.tab;
+    renderBuildingPanel();
+  });
+});
 
 function updateBuildingPanel() {
   const grid = document.getElementById('buildingGrid');
   if (!grid || grid.children.length === 0) { renderBuildingPanel(); return; }
-  for (let i = 0; i < buildingTypes.length; i++) {
-    const item = grid.children[i];
-    if (!item) continue;
-    const bt = buildingTypes[i];
-    const canAfford = !bt.cost || hasEnoughRes(bt.cost);
-    item.style.opacity = canAfford ? '' : '0.5';
-    item.style.pointerEvents = canAfford ? '' : 'none';
+  for (const item of grid.children) {
+    const type = item.dataset.type;
+    if (!type) continue;
+    const bt = buildingTypes.find(b => b.type === type);
+    if (!bt) continue;
+    const unlocked = isBuildingUnlocked(bt);
+    const canAfford = unlocked && (!bt.cost || hasEnoughRes(bt.cost));
+    item.style.opacity = !unlocked ? '0.35' : (canAfford ? '' : '0.5');
+    item.style.pointerEvents = (unlocked && canAfford) ? '' : 'none';
     item.classList.toggle('active', !!(placementMode && placementMode.type === bt.type));
-    if (bt.cost) {
-      const costDiv = item.querySelector('div:last-child');
-      if (costDiv) {
-        costDiv.innerHTML = Object.entries(bt.cost).map(([k, v]) =>
-          `<span style="font-size:9px;opacity:${canAfford?0.7:0.4};color:${canAfford?'#f0d9a0':'#ff6666'}">${resourceLabels[k]||k}${v}</span>`
-        ).join(' ');
-      }
-    }
   }
 }
 
@@ -1485,6 +1587,7 @@ function generateMap() {
 const map = generateMap();
 spawnInitialUnits();
 spawnEnemyCamp();
+renderBuildingPanel();
 
 // ====== 屏幕 ↔ 像素坐标转换 ======
 // ISO: 屏幕 x' = (x - y)*tw/2,  y' = (x + y)*th/2 - z
@@ -3111,7 +3214,7 @@ function checkAutoGarrison() {
     const bd = Math.abs(Math.round(unit.r) - bld.r) + Math.abs(Math.round(unit.c) - bld.c);
     if (bd <= 2) {
       // 已经在建筑旁边，直接进驻
-      garrisonUnit(unit, bld.r, bld.c);
+      garrisonUnit(unit, bld.r, bld.c, true);
     } else {
       // 移动到建筑
       unit.state = 'idle';
@@ -3154,8 +3257,8 @@ function checkAutoUngarrison() {
       if (!danger) {
         obj._ungarrisonTimer = (obj._ungarrisonTimer || 0) + 1;
         if (obj._ungarrisonTimer >= GARRISON_UNLEASH_DELAY && obj.garrison.length > 0) {
-          // 释放所有非战斗单位（仅村民）
-          const toRelease = obj.garrison.filter(g => g.type === 'villager');
+          // 仅释放自动进驻的村民（非手动驻扎）
+          const toRelease = obj.garrison.filter(g => g.type === 'villager' && g.autoGarrisoned);
           for (const g of [...toRelease]) {
             const idx = obj.garrison.indexOf(g);
             if (idx >= 0) {
@@ -3297,7 +3400,7 @@ function updateMovingUnit(unit) {
       // 到达建筑附近后自动进驻
       const ft = unit._fleeTarget;
       if (ft) {
-        const ok = garrisonUnit(unit, ft.r, ft.c);
+        const ok = garrisonUnit(unit, ft.r, ft.c, true);
         if (ok) { unit._fleeTarget = null; return; }
       }
       unit.state = 'idle';
@@ -3760,6 +3863,8 @@ function handleEdgeScroll() {
 function enemyPlaceBuilding(type, nearR, nearC) {
   const bt = buildingTypes.find(b => b.type === type);
   if (!bt || !bt.cost) return false;
+  if (bt.ageReq !== undefined && bt.ageReq > enemyAge) return false;
+  if (bt.requires && !hasBuildingType(bt.requires, TEAM.ENEMY)) return false;
   if (!hasEnoughRes(bt.cost, enemyResources)) return false;
   const pos = findBuildableTile(nearR, nearC, 6);
   if (!pos) return false;
@@ -3883,6 +3988,20 @@ function updateEnemyAI() {
     if (!hasMill && (enemyResources.food || 0) > 80) enemyPlaceBuilding('mill', enemyCampPos.r, enemyCampPos.c);
   }
 
+  // ---- 2.5 敌方时代升级 ----
+  enemyAgeTimer++;
+  if (enemyAgeTimer >= 600 && campAlive) {
+    enemyAgeTimer = 0;
+    const nextAge = enemyAge + 1;
+    if (nextAge <= 3) {
+      const cost = AGE_COSTS[nextAge];
+      if (cost && hasEnoughRes(cost, enemyResources)) {
+        deductRes(cost, enemyResources);
+        enemyAge = nextAge;
+      }
+    }
+  }
+
   // ---- 3. 军事发展：建造兵营/射箭场 ----
   enemyBuildTimer++;
   if (enemyBuildTimer >= 900) {
@@ -3896,8 +4015,10 @@ function updateEnemyAI() {
       enemyPlaceBuilding('barracks', enemyCampPos.r, enemyCampPos.c);
     } else if (hasBarracks && !hasArchery && econScore > 300 && campAlive) {
       enemyPlaceBuilding('archery-range', enemyCampPos.r, enemyCampPos.c);
-    } else if (hasBarracks && !hasStable && econScore > 400 && campAlive) {
+    } else if (hasBarracks && !hasStable && econScore > 500 && campAlive) {
       enemyPlaceBuilding('stable', enemyCampPos.r, enemyCampPos.c);
+    } else if (hasBarracks && econScore > 700 && campAlive) {
+      enemyPlaceBuilding('siege-workshop', enemyCampPos.r, enemyCampPos.c);
     }
   }
 
@@ -3909,7 +4030,7 @@ function updateEnemyAI() {
       if (obj.trainingQueue && obj.trainingQueue.length >= 3) continue;
       const ba = buildingActions[obj.type];
       if (!ba || ba.actions.length === 0) continue;
-      const trainable = ba.actions.filter(a => a.type === 'train' && a.id !== 'villager');
+      const trainable = ba.actions.filter(a => a.type === 'train' && a.id !== 'villager' && (a.ageReq === undefined || a.ageReq <= enemyAge));
       if (trainable.length === 0) continue;
       const action = trainable[Math.floor(Math.random() * trainable.length)];
       if (hasEnoughRes(action.cost, enemyResources) && enemyPop < enemyPopMax) {
@@ -4066,6 +4187,9 @@ function render() {
     updateSidePanelProgress();
     updateGarrisonPanel();
   }
+  // 时代显示
+  const ageEl = document.getElementById('ageDisplay');
+  if (ageEl) ageEl.textContent = `${AGE_ICONS[playerAge]} ${AGES[playerAge]}`;
 
   buildingLabels = [];
 
@@ -4662,6 +4786,23 @@ document.getElementById('sideInfoPanel').addEventListener('click', (e) => {
       }
     } else {
       if (team === TEAM.PLAYER) setHint('资源不足！');
+    }
+    return;
+  }
+  if (action.type === 'advance_age') {
+    if (hasEnoughRes(action.cost, res)) {
+      deductRes(action.cost, res);
+      const newAge = action.targetAge;
+      if (team === TEAM.PLAYER) {
+        playerAge = newAge;
+        setHint(`⬆ ${AGE_ICONS[newAge]} ${AGES[newAge]}！`);
+        renderBuildingPanel();
+      } else {
+        enemyAge = newAge;
+      }
+      updateSidePanel();
+    } else {
+      if (team === TEAM.PLAYER) setHint('资源不足，无法升级时代！');
     }
     return;
   }
