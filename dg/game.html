@@ -3493,6 +3493,7 @@ function drawUnit(unit) {
   const h = (tr >= 0 && tr < MAP_N && tc >= 0 && tc < MAP_N) ? map[tr][tc].height : 0;
   const y = sy2 - h;
   const isSelected = selectedUnits.includes(unit);
+  const pal = UNIT_PALETTE[unit.team] || UNIT_PALETTE[0];
   if (isSelected) {
     ctx.fillStyle = 'rgba(100,255,100,0.25)';
     ctx.beginPath();
@@ -3501,41 +3502,41 @@ function drawUnit(unit) {
   }
   const bx = sx, by = y;
   if (unit.type === 'villager') {
-    ctx.fillStyle = '#4488cc';
+    ctx.fillStyle = pal.body; // 衣服
     ctx.fillRect(bx - 2, by - 6, 4, 6);
-    ctx.fillStyle = '#e8c090';
+    ctx.fillStyle = '#e8c090'; // 头
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
-    ctx.fillStyle = '#c8a040';
+    ctx.fillStyle = pal.dark;
     ctx.fillRect(bx - 3, by - 11, 6, 2); ctx.fillRect(bx - 1.5, by - 13, 3, 2);
   } else if (unit.type === 'spearman') {
-    ctx.fillStyle = '#cc4444';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2, by - 6, 4, 6);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
-    ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.dark; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(bx + 2, by - 14); ctx.lineTo(bx + 2, by + 2); ctx.stroke();
     ctx.fillStyle = '#ccc';
     ctx.beginPath(); ctx.moveTo(bx + 2, by - 15); ctx.lineTo(bx + 0.5, by - 13); ctx.lineTo(bx + 3.5, by - 13); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#8a3a3a';
+    ctx.fillStyle = pal.dark;
     ctx.beginPath(); ctx.arc(bx - 2.5, by - 4, 2, 0, Math.PI * 2); ctx.fill();
   } else if (unit.type === 'swordsman') {
-    ctx.fillStyle = '#8888cc';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2.5, by - 6, 5, 6);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
-    ctx.fillStyle = '#888';
+    ctx.fillStyle = pal.dark;
     ctx.fillRect(bx - 2.5, by - 11, 5, 3); ctx.fillRect(bx - 1.5, by - 13, 3, 2);
     ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(bx + 3, by - 11); ctx.lineTo(bx + 3, by - 2); ctx.stroke();
     ctx.fillStyle = '#c80'; ctx.fillRect(bx + 2.5, by - 12, 1.5, 1.5);
   } else if (unit.type === 'archer') {
-    ctx.fillStyle = '#4a8a4a';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2, by - 6, 4, 6);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
@@ -3546,43 +3547,43 @@ function drawUnit(unit) {
     ctx.strokeStyle = '#aaa'; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.moveTo(bx + 2, by - 9); ctx.lineTo(bx + 2, by - 1); ctx.stroke();
   } else if (unit.type === 'cavalry') {
-    ctx.fillStyle = '#8a6a4a';
+    ctx.fillStyle = pal.dark;
     ctx.beginPath(); ctx.ellipse(bx, by - 3, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#7a5a3a';
+    ctx.fillStyle = pal.head;
     ctx.beginPath(); ctx.ellipse(bx + 5, by - 4, 2, 1.5, 0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#cc4444';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 1.5, by - 8, 3, 5);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 10, 2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2.5, by - 1, 1.5, 2); ctx.fillRect(bx + 1, by - 1, 1.5, 2);
   } else if (unit.type === 'scout') {
-    ctx.fillStyle = '#66bbbb';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2, by - 6, 4, 5);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
-    ctx.strokeStyle = '#448888'; ctx.lineWidth = 0.5;
+    ctx.strokeStyle = pal.dark; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.arc(bx + 3, by - 4, 2, -Math.PI / 3, Math.PI / 3); ctx.stroke();
   } else if (unit.type === 'heavy_infantry') {
-    ctx.fillStyle = '#555577';
+    ctx.fillStyle = pal.dark;
     ctx.fillRect(bx - 3, by - 7, 6, 7);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 9, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#5a3a1a';
     ctx.fillRect(bx - 2, by, 1.5, 3); ctx.fillRect(bx + 0.5, by, 1.5, 3);
-    ctx.fillStyle = '#777';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 3, by - 12, 6, 3);
     ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.moveTo(bx + 3.5, by - 11); ctx.lineTo(bx + 3.5, by - 2); ctx.stroke();
     ctx.fillStyle = '#c80'; ctx.fillRect(bx + 3, by - 12, 1.5, 1.5);
   } else if (unit.type === 'cavalry_archer') {
-    ctx.fillStyle = '#8a6a4a';
+    ctx.fillStyle = pal.dark;
     ctx.beginPath(); ctx.ellipse(bx, by - 3, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#7a5a3a';
+    ctx.fillStyle = pal.head;
     ctx.beginPath(); ctx.ellipse(bx + 5, by - 4, 2, 1.5, 0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#4a8a4a';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 1.5, by - 8, 3, 5);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 10, 2, 0, Math.PI * 2); ctx.fill();
@@ -3591,9 +3592,9 @@ function drawUnit(unit) {
     ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(bx + 3, by - 5, 3.5, -Math.PI / 2, Math.PI / 2); ctx.stroke();
   } else if (unit.type === 'siege_ram') {
-    ctx.fillStyle = '#6a4a2a';
+    ctx.fillStyle = pal.dark;
     ctx.beginPath(); ctx.ellipse(bx, by - 2, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#8a6a4a';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 4, by - 6, 8, 4);
     ctx.fillStyle = '#555';
     ctx.fillRect(bx - 5, by - 7, 10, 1.5);
@@ -3601,7 +3602,7 @@ function drawUnit(unit) {
     ctx.beginPath(); ctx.moveTo(bx - 3, by - 6); ctx.lineTo(bx - 3, by - 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(bx + 3, by - 6); ctx.lineTo(bx + 3, by - 2); ctx.stroke();
   } else if (unit.type === 'monk') {
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2, by - 6, 4, 6);
     ctx.fillStyle = '#e8c090';
     ctx.beginPath(); ctx.arc(bx, by - 8, 2.5, 0, Math.PI * 2); ctx.fill();
@@ -3612,7 +3613,6 @@ function drawUnit(unit) {
     ctx.fillStyle = '#c80';
     ctx.fillRect(bx - 1, by - 14, 2, 1.5);
   } else if (unit.type === 'king') {
-    const pal = UNIT_PALETTE[unit.team] || UNIT_PALETTE[0];
     ctx.fillStyle = pal.body;
     ctx.fillRect(bx - 2.5, by - 7, 5, 7);
     ctx.fillStyle = '#e8c090';
@@ -3944,24 +3944,76 @@ function updateEnemyAI() {
   }
 }
 
-// ====== 瞭望塔自动攻击 ======
+// ====== 箭矢动画系统 ======
+let arrows = [];
+
+function spawnArrow(fromR, fromC, toR, toC, team) {
+  arrows.push({
+    fromR, fromC, toR, toC,
+    team,
+    progress: 0,
+    speed: 0.08,
+  });
+}
+
+function updateArrows() {
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    arrows[i].progress += arrows[i].speed;
+    if (arrows[i].progress >= 1) arrows.splice(i, 1);
+  }
+}
+
+function drawArrows() {
+  for (const a of arrows) {
+    const p = a.progress;
+    const fromSx = (a.fromC - a.fromR) * (TILE_W / 2) + cam.x;
+    const fromSy = (a.fromC + a.fromR) * (TILE_H / 2) + cam.y;
+    const toSx = (a.toC - a.toR) * (TILE_W / 2) + cam.x;
+    const toSy = (a.toC + a.toR) * (TILE_H / 2) + cam.y;
+    const cx = fromSx + (toSx - fromSx) * p;
+    const cy = fromSy + (toSy - fromSy) * p - 8;
+    const angle = Math.atan2(toSy - fromSy, toSx - fromSx);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.fillStyle = a.team === TEAM.PLAYER ? '#88ccff' : '#ff8888';
+    ctx.beginPath();
+    ctx.moveTo(4, 0);
+    ctx.lineTo(-3, -1.5);
+    ctx.lineTo(-1.5, 0);
+    ctx.lineTo(-3, 1.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,200,0.6)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ====== 瞭望塔 & 驻扎城镇中心 自动射箭 ======
 function updateTowers() {
   for (let r = 0; r < MAP_N; r++) {
     for (let c = 0; c < MAP_N; c++) {
       const obj = map[r][c].object;
-      if (!obj || obj.type !== 'tower' || obj.hp <= 0) continue;
+      if (!obj || obj.hp <= 0) continue;
+      // 瞭望塔 或 有驻扎的城镇中心
+      const isTower = obj.type === 'tower';
+      const hasGarrison = obj.type === 'town-center' && obj.garrison && obj.garrison.length > 0;
+      if (!isTower && !hasGarrison) continue;
       if (obj.team === undefined) continue;
-      const range = 6;
+      const range = 1;
       obj.attackCooldown = (obj.attackCooldown || 0) - 1;
       if (obj.attackCooldown > 0) continue;
       for (const unit of units) {
         if (unit.hp <= 0 || unit.team === obj.team) continue;
         const d = Math.abs(r - Math.round(unit.r)) + Math.abs(c - Math.round(unit.c));
         if (d <= range) {
-          const towerAtk = 5;
-          unit.hp -= towerAtk;
+          const atk = isTower ? 5 : 2 + Math.min(obj.garrison.length, 5);
+          unit.hp -= atk;
+          spawnArrow(r, c, Math.round(unit.r), Math.round(unit.c), obj.team);
           if (unit.hp <= 0) removeUnit(unit);
-          obj.attackCooldown = 40;
+          obj.attackCooldown = isTower ? 40 : Math.max(15, 50 - obj.garrison.length * 5);
           break;
         }
       }
@@ -4002,6 +4054,7 @@ function render() {
   checkAutoUngarrison();
   updateEnemyAI();
   updateTowers();
+  updateArrows();
   processTrainingQueues();
   updateResources();
   updatePopulation();
@@ -4131,6 +4184,8 @@ function render() {
     ctx.fillText(lbl.name, lbl.x, lbl.y);
     ctx.shadowBlur = 0;
   }
+
+  drawArrows();
 
   ctx.restore();
 
@@ -4410,28 +4465,37 @@ canvas.addEventListener('contextmenu', (e) => {
     return;
   }
 
-  // 右键卸货 或 驻扎（用快照避免forEach中修改selectedUnits导致问题）
-  if (cell.object && (canGarrison(cell.object.type) || ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type))) {
-    const unitsSnapshot = [...selectedUnits];
-    for (let i = 0; i < unitsSnapshot.length; i++) {
-      const unit = unitsSnapshot[i];
-      if (unit.hp <= 0) continue;
-      // 村民有资源且该建筑可卸货 → 卸货
-      if (unit.type === 'villager' && unit.carry > 0 && ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type)) {
+  // 右键驻扎（己方可驻扎建筑，用快照避免中途数组变动）
+  if (cell.object && cell.object.team === TEAM.PLAYER && canGarrison(cell.object.type)) {
+    const snap = [...selectedUnits];
+    for (let i = 0; i < snap.length; i++) {
+      const u = snap[i];
+      if (u.hp <= 0 || u.type === 'king') continue;
+      if (!units.includes(u)) continue;
+      // 带资源的村民优先卸货
+      if (u.type === 'villager' && u.carry > 0 && ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type)) {
+        u.state = 'idle'; u.attackTarget = null; u.farming = false; u.gatherTarget = null; u.buildingTarget = null;
+        u.dropTarget = { r: hit.r, c: hit.c, obj: cell.object };
+        moveUnitTo(u, offsetTarget(hit.r, hit.c, i), 'deposit');
+        continue;
+      }
+      garrisonUnit(u, hit.r, hit.c);
+    }
+    return;
+  }
+
+  // 右键卸货点存放
+  if (cell.object && ['town-center','lumber-camp','mining-camp','mill'].includes(cell.object.type)) {
+    selectedUnits.forEach((unit, i) => {
+      if (unit.type === 'villager' && unit.carry > 0) {
         unit.state = 'idle'; unit.attackTarget = null; unit.farming = false; unit.gatherTarget = null; unit.buildingTarget = null;
         unit.dropTarget = { r: hit.r, c: hit.c, obj: cell.object };
         moveUnitTo(unit, offsetTarget(hit.r, hit.c, i), 'deposit');
-      }
-      // 非国王单位 → 驻扎
-      else if (unit.type !== 'king' && canGarrison(cell.object.type) && cell.object.team === TEAM.PLAYER) {
-        garrisonUnit(unit, hit.r, hit.c);
-      }
-      // 否则移动过去
-      else {
+      } else {
         unit.state = 'idle'; unit.gatherTarget = null; unit.attackTarget = null; unit.farming = false; unit.buildingTarget = null; unit.carry = 0; unit.dropTarget = null;
         moveUnitTo(unit, offsetTarget(hit.r, hit.c, i), null);
       }
-    }
+    });
     return;
   }
 
